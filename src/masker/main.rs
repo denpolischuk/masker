@@ -1,29 +1,29 @@
-use crate::masker::Schema;
+use crate::masker::Entity;
 
-pub struct Database {
+pub struct Masker {
     connection_creds: DatabaseConnectionCredentials,
-    pub schemas: Vec<Schema>,
+    pub entities: Vec<Entity>,
 }
 
-impl Database {
+impl Masker {
     pub fn new_from_yaml(filename: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let f = std::fs::File::open(filename)?;
         let data = serde_yaml::from_reader(f)?;
         let creds = DatabaseConnectionCredentials::new_from_yaml(&data)?;
-        let mut schemas: Vec<Schema> = vec![];
+        let mut schemas: Vec<Entity> = vec![];
         match data["schemas"].as_sequence() {
             Some(seq) => {
                 seq.iter()
                     .try_for_each(|schema_yaml| -> Result<(), Box<dyn std::error::Error>> {
-                        schemas.push(Schema::new_from_yaml(schema_yaml)?);
+                        schemas.push(Entity::new_from_yaml(schema_yaml)?);
                         Ok(())
                     })
             }
             None => return Err("Missing schemas definition in yaml.".into()),
         }?;
-        Ok(Database {
+        Ok(Masker {
             connection_creds: creds,
-            schemas,
+            entities: schemas,
         })
     }
 

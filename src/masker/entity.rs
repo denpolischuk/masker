@@ -1,16 +1,16 @@
 use mysql::prelude::Queryable;
 
-use crate::masker::SchemaEntry;
+use crate::masker::Field;
 use std::{fmt::Display, vec};
 
-pub struct Schema {
+pub struct Entity {
     name: String,
     pk_name: String,
-    pub entries: Vec<SchemaEntry>,
+    pub entries: Vec<Field>,
 }
 
-impl Schema {
-    fn new(name: String, pk_name: String, entries: Vec<SchemaEntry>) -> Self {
+impl Entity {
+    fn new(name: String, pk_name: String, entries: Vec<Field>) -> Self {
         Self {
             name,
             pk_name,
@@ -29,11 +29,11 @@ impl Schema {
             None => return Err("Missing or invalid 'pk.type' entry in YAML file. You should specify primary key name and type [int string]".into()),
         };
 
-        let mut s_entries: Vec<SchemaEntry> = vec::Vec::new();
+        let mut s_entries: Vec<Field> = vec::Vec::new();
         match yaml["fields"].as_sequence() {
             Some(seq) => seq
                 .iter()
-                .for_each(|entry| s_entries.push(SchemaEntry::new_from_yaml(entry).unwrap())), // It's
+                .for_each(|entry| s_entries.push(Field::new_from_yaml(entry).unwrap())), // It's
             // ok to unwrap here, because we want to panic on corrupted yaml schema
             None => {
                 return Err(
@@ -42,7 +42,7 @@ impl Schema {
             }
         };
 
-        Ok(Schema::new(s_name, s_pk_name, s_entries))
+        Ok(Entity::new(s_name, s_pk_name, s_entries))
     }
 
     pub fn get_table_name(&self) -> String {
@@ -63,7 +63,7 @@ impl Schema {
     }
 }
 
-impl Display for Schema {
+impl Display for Entity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "name: {}, pk_name: {}", self.name, self.pk_name)?;
         writeln!(f, "entries: \n")?;

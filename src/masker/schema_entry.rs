@@ -2,30 +2,12 @@ use std::fmt::Display;
 
 use crate::masker::transformer::{new_from_yaml, Options, Transformer};
 
-pub enum SupportedSchemaEntries {
-    FirstName,
-    LastName,
-    Template,
-    MobilePhone,
-}
-
-impl Display for SupportedSchemaEntries {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SupportedSchemaEntries::FirstName => write!(f, "FirstName"),
-            SupportedSchemaEntries::LastName => write!(f, "LastName"),
-            SupportedSchemaEntries::Template => write!(f, "Template"),
-            SupportedSchemaEntries::MobilePhone => write!(f, "MobilePhone"),
-        }
-    }
-}
-
-pub struct SchemaEntry {
+pub struct Field {
     field_name: String,
     transformer: Box<dyn Transformer>,
 }
 
-impl SchemaEntry {
+impl Field {
     pub fn new(field_name: String, transformer: Box<dyn Transformer>) -> Self {
         Self {
             field_name,
@@ -55,7 +37,7 @@ impl SchemaEntry {
     }
 }
 
-impl Display for SchemaEntry {
+impl Display for Field {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "field_name: {}", self.field_name)
     }

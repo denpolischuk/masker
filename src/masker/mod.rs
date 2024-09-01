@@ -1,7 +1,7 @@
-mod database;
-mod schema;
+mod entity;
+mod main;
 mod schema_entry;
 pub mod transformer;
-pub use database::Database;
-use schema::Schema;
-pub use schema_entry::{SchemaEntry, SupportedSchemaEntries};
+use entity::Entity;
+pub use main::Masker;
+pub use schema_entry::Field;
