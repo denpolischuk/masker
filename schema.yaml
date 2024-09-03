@@ -1,19 +1,21 @@
-connection:
-  username: root
-  password: root
-  host: localhost
-  port: 3306
-  db_name: test
+db: 
+  family: mysql
+  connection:
+    username: root
+    password: root
+    host: localhost
+    port: 3306
+    db_name: classicmodels 
 schemas:
-  - table: test_table
+  - table: customers
     pk:
-      name: id
+      name: customerNumber
       type: int
     fields:
-      - name: name
+      - name: contactFirstName
         kind: FirstName
-      - name: last_name
+      - name: contactLastName
         kind: LastName
-      - name: email
+      - name: customerName
         kind: Template
-        template: "test{id}@example.com"
+        template: "Company nr {id}"

@@ -6,4 +6,5 @@ edition = "2021"
 [dependencies]
 mysql = "25.0.1"
 rand = "0.8.5"
+regex = "1.10.6"
 serde_yaml = "0.9.34"
