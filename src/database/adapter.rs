@@ -3,7 +3,7 @@ use serde_yaml::Error as YamlError;
 
 use crate::masker::Masker;
 
-use super::mysql_adapter::MySQLAdapter;
+use super::mysql::MySQLAdapter;
 pub trait DatabaseAdapter {
     fn apply_mask(&self, masker: &Masker) -> Result<(), Box<dyn std::error::Error>>;
 }
