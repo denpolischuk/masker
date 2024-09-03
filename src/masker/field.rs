@@ -2,6 +2,8 @@ use std::fmt::Display;
 
 use crate::masker::transformer::{new_from_yaml, Options, Transformer};
 
+use super::transformer::GeneratedValue;
+
 pub struct Field {
     field_name: String,
     transformer: Box<dyn Transformer>,
@@ -15,7 +17,7 @@ impl Field {
         }
     }
 
-    pub fn generate(&self, opts: Options) -> Result<mysql::Value, Box<dyn std::error::Error>> {
+    pub fn generate(&self, opts: &Options) -> Result<GeneratedValue, Box<dyn std::error::Error>> {
         self.transformer.generate(opts)
     }
 

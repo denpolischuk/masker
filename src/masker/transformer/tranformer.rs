@@ -1,11 +1,16 @@
 use crate::masker::transformer::{FirstNameTransformer, LastNameTransformer, TemplateTransformer};
 
+pub enum GeneratedValue {
+    String(String),
+    Number(String),
+}
+
 pub trait Transformer {
     fn read_parameters_from_yaml(
         &mut self,
         yaml: &serde_yaml::Value,
     ) -> Result<(), Box<dyn std::error::Error>>;
-    fn generate(&self, options: Options) -> Result<mysql::Value, Box<dyn std::error::Error>>;
+    fn generate(&self, options: &Options) -> Result<GeneratedValue, Box<dyn std::error::Error>>;
 }
 
 pub struct Options {

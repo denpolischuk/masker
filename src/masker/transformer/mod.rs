@@ -6,4 +6,4 @@ mod tranformer;
 pub use first_name::FirstNameTransformer;
 pub use from_template::TemplateTransformer;
 pub use last_name::LastNameTransformer;
-pub use tranformer::{new_from_yaml, Options, Transformer};
+pub use tranformer::{new_from_yaml, GeneratedValue, Options, Transformer};

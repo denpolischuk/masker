@@ -1,19 +1,24 @@
-use mysql::prelude::Queryable;
-
 use crate::masker::Field;
-use std::{fmt::Display, vec};
+use std::{borrow::Borrow, fmt::Display, vec};
+
+pub enum PkType {
+    Int,
+    String,
+}
 
 pub struct Entity {
     name: String,
     pk_name: String,
-    pub entries: Vec<Field>,
+    pk_type: PkType,
+    entries: Vec<Field>,
 }
 
 impl Entity {
-    fn new(name: String, pk_name: String, entries: Vec<Field>) -> Self {
+    pub fn new(name: String, pk_name: String, pk_type: PkType, entries: Vec<Field>) -> Self {
         Self {
             name,
             pk_name,
+            pk_type,
             entries,
         }
     }
@@ -26,6 +31,15 @@ impl Entity {
 
         let s_pk_name = match yaml["pk"]["name"].as_str() {
             Some(s) => String::from(s),
+            None => return Err("Missing or invalid 'pk.type' entry in YAML file. You should specify primary key name and type [int string]".into()),
+        };
+
+        let s_pk_type = match yaml["pk"]["type"].as_str() {
+            Some(s) => match s {
+                "int" => PkType::Int,
+                "string" => PkType::String,
+                other => return Err(format!("Unknown primary key type 'pk.type' {}", other).into()),
+            }
             None => return Err("Missing or invalid 'pk.type' entry in YAML file. You should specify primary key name and type [int string]".into()),
         };
 
@@ -42,24 +56,20 @@ impl Entity {
             }
         };
 
-        Ok(Entity::new(s_name, s_pk_name, s_entries))
+        Ok(Entity::new(s_name, s_pk_name, s_pk_type, s_entries))
     }
 
     pub fn get_table_name(&self) -> String {
         self.name.to_string()
     }
-
-    pub fn mask(&self, mut c: mysql::PooledConn) -> Result<(), Box<dyn std::error::Error>> {
-        let q = format!(
-            "SELECT {} from {} ORDER BY {} ASC LIMIT {}, {}",
-            self.pk_name, self.name, self.pk_name, "0", "30"
-        );
-        println!("query = {q}");
-        let queries: Vec<String> =
-            c.query_map::<Box<str>, _, String, String>(q, |pk| format!("UPDATE {}", pk))?;
-
-        println!("{:?}", queries);
-        Ok(())
+    pub fn get_pk_name(&self) -> &String {
+        self.pk_name.borrow()
+    }
+    pub fn get_pk_type(&self) -> &PkType {
+        self.pk_type.borrow()
+    }
+    pub fn get_entries(&self) -> &Vec<Field> {
+        self.entries.borrow()
     }
 }
 

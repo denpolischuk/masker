@@ -1,7 +1,7 @@
 mod entity;
+mod field;
 mod main;
-mod schema_entry;
+pub use entity::{Entity, PkType};
 pub mod transformer;
-use entity::Entity;
+pub use field::Field;
 pub use main::Masker;
-pub use schema_entry::Field;

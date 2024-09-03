@@ -1,4 +1,6 @@
 use crate::masker::transformer::{Options, Transformer};
+
+use super::tranformer::GeneratedValue;
 pub struct TemplateTransformer {
     template: String,
 }
@@ -18,9 +20,9 @@ impl Default for TemplateTransformer {
 }
 
 impl Transformer for TemplateTransformer {
-    fn generate(&self, opts: Options) -> Result<mysql::Value, Box<dyn std::error::Error>> {
+    fn generate(&self, opts: &Options) -> Result<GeneratedValue, Box<dyn std::error::Error>> {
         let res = self.template.replace("{id}", opts.pk.to_string().as_str());
-        Ok(mysql::Value::Bytes(res.into()))
+        Ok(GeneratedValue::String(res))
     }
 
     fn read_parameters_from_yaml(

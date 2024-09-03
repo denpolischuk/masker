@@ -1,6 +1,8 @@
 use rand::Rng;
 
 use crate::masker::transformer::{Options, Transformer};
+
+use super::tranformer::GeneratedValue;
 const RANDOM_NAMES: &[&str] = &[
     "Alice", "Bob", "Charlie", "Diana", "Ethan", "Fiona", "George", "Hannah", "Isaac", "Jasmine",
     "Kevin", "Lena", "Mason", "Nina", "Oscar", "Piper", "Quinn", "Ruby", "Sam", "Tina", "Ulysses",
@@ -31,7 +33,7 @@ impl Default for FirstNameTransformer {
 }
 
 impl Transformer for FirstNameTransformer {
-    fn generate(&self, _: Options) -> Result<mysql::Value, Box<dyn std::error::Error>> {
+    fn generate(&self, _: &Options) -> Result<GeneratedValue, Box<dyn std::error::Error>> {
         let rand_i = rand::thread_rng().gen_range(0..RANDOM_NAMES_SIZE - 1);
         let res = RANDOM_NAMES[rand_i];
 
@@ -40,7 +42,7 @@ impl Transformer for FirstNameTransformer {
         // if value.to_lowercase().trim() == res.to_lowercase().trim() {
         //     return Ok(String::from(RANDOM_NAMES[rand_i + 1]));
         // }
-        Ok(mysql::Value::Bytes(res.into()))
+        Ok(GeneratedValue::String(res.to_string()))
     }
 
     fn read_parameters_from_yaml(
