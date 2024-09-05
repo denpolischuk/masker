@@ -17,7 +17,10 @@ impl Field {
         }
     }
 
-    pub fn generate(&self, opts: &Options) -> Result<GeneratedValue, Box<dyn std::error::Error>> {
+    pub fn generate(
+        &self,
+        opts: &Options,
+    ) -> Result<GeneratedValue, Box<dyn std::error::Error + Sync + Send>> {
         self.transformer.generate(opts)
     }
 

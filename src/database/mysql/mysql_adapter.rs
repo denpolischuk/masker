@@ -1,7 +1,8 @@
 use super::credentials::MySQLConnectionCredentials;
-use mysql::{prelude::*, TxOpts};
-use std::borrow::BorrowMut;
-use std::time::Duration;
+use async_trait::async_trait;
+use futures::future::join_all;
+use sqlx::Row;
+use std::sync::Arc;
 
 use crate::database::adapter::DatabaseAdapter;
 use crate::masker::transformer::Options;
@@ -12,17 +13,21 @@ pub struct MySQLAdapter {
 }
 
 impl MySQLAdapter {
-    pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new_from_yaml(
+        yaml: &serde_yaml::Value,
+    ) -> Result<Self, Box<dyn std::error::Error + Sync + Send>> {
         let connection_creds = MySQLConnectionCredentials::from_yaml(yaml)?;
         Ok(MySQLAdapter { connection_creds })
     }
 
-    fn verify_entities(
+    async fn verify_entities(
         &self,
-        masker: &masker::Masker,
-        conn: &mut mysql::PooledConn,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let db_tables: Vec<String> = conn.query("SHOW TABLES;")?;
+        masker: Arc<masker::Masker>,
+        p: &sqlx::MySqlPool,
+    ) -> Result<(), Box<dyn std::error::Error + Sync + Send>> {
+        let rows = sqlx::query("SHOW TABLES;").fetch_all(p).await?;
+
+        let db_tables: Vec<String> = rows.iter().map(|r| r.get::<String, _>(0)).collect();
 
         let mut missing_t = String::new();
         if masker.get_entities().iter().all(|entity| -> bool {
@@ -43,7 +48,7 @@ impl MySQLAdapter {
         &self,
         masker_entity: &masker::Entity,
         id: Box<dyn ToString>,
-    ) -> Result<String, Box<dyn std::error::Error>> {
+    ) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
         let entity_fields = masker_entity.get_entries();
         if entity_fields.is_empty() {
             return Err(format!("Entity {} doesn't have any fields to mask. Either remove the entity from config or add fields that should be masked", masker_entity.get_table_name().as_str()).into());
@@ -74,69 +79,79 @@ impl MySQLAdapter {
         ))
     }
 
-    fn get_batch_to_update(
+    async fn get_batch_to_update(
         &self,
         masker_entity: &masker::Entity,
-        conn: &mut mysql::PooledConn,
+        p: &sqlx::MySqlPool,
         b_size: u32,
         offset: u32,
-    ) -> Result<Vec<String>, mysql::error::Error> {
-        let values: Vec<usize> = conn.exec(
+    ) -> Result<Vec<String>, sqlx::Error> {
+        let values: Vec<String> = sqlx::query(
             format!(
                 "SELECT {} FROM {} ORDER BY {} ASC LIMIT ? OFFSET ?",
                 masker_entity.get_pk_name(),
                 masker_entity.get_table_name(),
                 masker_entity.get_pk_name()
-            ),
-            (b_size, offset),
-        )?;
-        Ok(values.iter().map(|v| v.to_string()).collect())
+            )
+            .as_str(),
+        )
+        .bind(b_size)
+        .bind(offset)
+        .fetch_all(p)
+        .await?
+        .iter()
+        .map(|r| r.get::<i32, _>(0).to_string())
+        .collect();
+        Ok(values)
     }
 
-    fn mask_table(
+    async fn mask_table(
         &self,
         masker_entity: &masker::Entity,
-        mut conn: mysql::PooledConn,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+        p: &sqlx::MySqlPool,
+    ) -> Result<(), Box<dyn std::error::Error + Sync + Send>> {
         let b_size = 30;
         let mut offs_idx = 0;
         loop {
-            let ids = self.get_batch_to_update(
-                masker_entity,
-                conn.borrow_mut(),
-                b_size,
-                offs_idx * b_size,
-            )?;
+            let ids = self
+                .get_batch_to_update(masker_entity, p, b_size, offs_idx * b_size)
+                .await?;
             if ids.is_empty() {
                 break;
             }
-            let mut tr = conn.start_transaction(TxOpts::default())?;
+            let mut tx = p.begin().await?;
             for id in ids {
-                _ = tr.query::<String, String>(
-                    self.prepare_entity_query(masker_entity, Box::new(id))?,
-                );
+                sqlx::query(
+                    self.prepare_entity_query(masker_entity, Box::new(id))?
+                        .as_str(),
+                )
+                .execute(&mut *tx)
+                .await?;
             }
-            tr.commit()?;
+            tx.commit().await?;
             offs_idx += 1;
         }
         Ok(())
     }
 }
 
+#[async_trait]
 impl DatabaseAdapter for MySQLAdapter {
-    fn apply_mask(&self, masker: &crate::masker::Masker) -> Result<(), Box<dyn std::error::Error>> {
-        let con_pool_opts = mysql::Opts::from_url(self.connection_creds.get_as_string().as_str())?;
-        let pool = match mysql::Pool::new(con_pool_opts) {
-            Ok(p) => p,
-            Err(e) => return Err(e.into()),
-        };
-        let mut c = pool.try_get_conn(Duration::new(30, 0))?;
-        self.verify_entities(masker, &mut c)?;
-        for entity in masker.get_entities() {
-            let pool = pool.clone();
-            let c = pool.try_get_conn(Duration::new(30, 0))?;
-            self.mask_table(entity, c)?;
-        }
+    async fn apply_mask(
+        &self,
+        masker: Arc<crate::masker::Masker>,
+    ) -> Result<(), Box<dyn std::error::Error + Sync + Send>> {
+        let pool = sqlx::mysql::MySqlPoolOptions::new()
+            .max_connections(5)
+            .connect(self.connection_creds.get_as_string().as_str())
+            .await?;
+        self.verify_entities(masker.clone(), &pool).await?;
+        let futs = masker
+            .get_entities()
+            .iter()
+            .map(|entity| self.mask_table(entity, &pool));
+        join_all(futs).await;
+
         Ok(())
     }
 }
@@ -147,10 +162,12 @@ mod tests {
 
     use super::*;
 
-    fn get_test_conn() -> mysql::Pool {
-        let con_pool_opts =
-            mysql::Opts::from_url("mysql://root:root@localhost/classicmodels").unwrap();
-        mysql::Pool::new(con_pool_opts).unwrap()
+    async fn get_test_conn() -> sqlx::Pool<sqlx::MySql> {
+        sqlx::mysql::MySqlPoolOptions::new()
+            .max_connections(5)
+            .connect("mysql://root:root@localhost/classicmodels")
+            .await
+            .unwrap()
     }
 
     fn get_adapter() -> MySQLAdapter {
@@ -224,8 +241,8 @@ mod tests {
         assert!(adapter.prepare_entity_query(&entity, Box::new(id)).is_err());
     }
 
-    #[test]
-    fn adapter_masks_table_values() {
+    #[tokio::test]
+    async fn adapter_masks_table_values() {
         let adapter = get_adapter();
         let t_name = "customers";
         let pk_name = "customerNumber";
@@ -235,42 +252,47 @@ mod tests {
             Box::new(FirstNameTransformer {}),
         )];
         let entity = Entity::new(t_name.to_string(), pk_name.to_string(), PkType::Int, fields);
-        let pc = get_test_conn();
-        let before = pc
-            .get_conn()
-            .unwrap()
-            .query::<String, String>(format!(
+        let pool = get_test_conn().await;
+        let before = sqlx::query(
+            format!(
                 "SELECT {} FROM {} ORDER BY {} ASC LIMIT 1",
                 field_name, t_name, pk_name
-            ))
-            .unwrap();
-        let c = pc.get_conn().unwrap();
-        adapter.mask_table(&entity, c).unwrap();
-        let after = pc
-            .get_conn()
-            .unwrap()
-            .query::<String, String>(format!(
+            )
+            .as_str(),
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap()
+        .get::<String, _>(0);
+        adapter.mask_table(&entity, &pool).await.unwrap();
+        let after = sqlx::query(
+            format!(
                 "SELECT {} FROM {} ORDER BY {} ASC LIMIT 1",
                 field_name, t_name, pk_name
-            ))
-            .unwrap();
+            )
+            .as_str(),
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap()
+        .get::<String, _>(0);
 
         assert_ne!(before, after)
     }
 
-    #[test]
-    fn adapter_get_batch_to_update_returns_ids() {
+    #[tokio::test]
+    async fn adapter_get_batch_to_update_returns_ids() {
         let adapter = get_adapter();
         let t_name = "customers";
         let pk_name = "customerNumber";
         let fields: Vec<Field> = vec![];
         let entity = Entity::new(t_name.to_string(), pk_name.to_string(), PkType::Int, fields);
-        let pc = get_test_conn();
-        let mut con = pc.get_conn().unwrap();
+        let pool = get_test_conn().await;
 
         let expected = vec!["103", "112", "114", "119", "121"];
         let res = adapter
-            .get_batch_to_update(&entity, &mut con, 5, 0)
+            .get_batch_to_update(&entity, &pool, 5, 0)
+            .await
             .unwrap();
 
         assert_eq!(res, expected)

@@ -5,12 +5,15 @@ pub enum GeneratedValue {
     Number(String),
 }
 
-pub trait Transformer {
+pub trait Transformer: Sync + Send {
     fn read_parameters_from_yaml(
         &mut self,
         yaml: &serde_yaml::Value,
-    ) -> Result<(), Box<dyn std::error::Error>>;
-    fn generate(&self, options: &Options) -> Result<GeneratedValue, Box<dyn std::error::Error>>;
+    ) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
+    fn generate(
+        &self,
+        options: &Options,
+    ) -> Result<GeneratedValue, Box<dyn std::error::Error + Sync + Send>>;
 }
 
 pub struct Options {
@@ -19,7 +22,7 @@ pub struct Options {
 
 pub fn new_from_yaml(
     yaml: &serde_yaml::Value,
-) -> Result<Box<dyn Transformer>, Box<dyn std::error::Error>> {
+) -> Result<Box<dyn Transformer>, Box<dyn std::error::Error + Sync + Send>> {
     match yaml["kind"].as_str() {
         Some(s) => match s {
             "FirstName" => Ok(Box::new(FirstNameTransformer::new())),
@@ -43,7 +46,7 @@ mod tests {
     use crate::masker::transformer::new_from_yaml;
 
     #[test]
-    fn get_transformer_from_yaml() -> Result<(), Box<dyn std::error::Error>> {
+    fn get_transformer_from_yaml() -> Result<(), Box<dyn std::error::Error + Sync + Send>> {
         let yaml = serde_yaml::from_str("kind: LastName").unwrap();
         _ = new_from_yaml(&yaml)?;
         Ok(())

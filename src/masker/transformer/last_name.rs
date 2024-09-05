@@ -123,7 +123,10 @@ impl Default for LastNameTransformer {
 }
 
 impl Transformer for LastNameTransformer {
-    fn generate(&self, _: &Options) -> Result<GeneratedValue, Box<dyn std::error::Error>> {
+    fn generate(
+        &self,
+        _: &Options,
+    ) -> Result<GeneratedValue, Box<dyn std::error::Error + Sync + Send>> {
         let rand_i = rand::thread_rng().gen_range(0..RANDOM_NAMES_SIZE - 1);
         let res = RANDOM_NAMES[rand_i];
 
@@ -138,7 +141,7 @@ impl Transformer for LastNameTransformer {
     fn read_parameters_from_yaml(
         &mut self,
         _: &serde_yaml::Value,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn std::error::Error + Sync + Send>> {
         Ok(())
     }
 }

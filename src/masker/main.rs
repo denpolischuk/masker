@@ -28,3 +28,6 @@ impl Masker {
         &self.entities
     }
 }
+
+unsafe impl Sync for Masker {}
+unsafe impl Send for Masker {}
