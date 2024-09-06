@@ -83,8 +83,8 @@ impl MySQLAdapter {
         &self,
         masker_entity: &masker::Entity,
         p: &sqlx::MySqlPool,
-        b_size: u32,
-        offset: u32,
+        b_size: i32,
+        offset: i32,
     ) -> Result<Vec<String>, sqlx::Error> {
         let values: Vec<String> = sqlx::query(
             format!(
@@ -105,32 +105,54 @@ impl MySQLAdapter {
         Ok(values)
     }
 
+    async fn get_total_size(
+        &self,
+        masker_entity: &masker::Entity,
+        p: &sqlx::MySqlPool,
+    ) -> Result<i32, Box<dyn std::error::Error + Sync + Send>> {
+        Ok(sqlx::query(
+            format!(
+                "SELECT COUNT({}) FROM {};",
+                masker_entity.get_pk_name(),
+                masker_entity.get_table_name()
+            )
+            .as_str(),
+        )
+        .fetch_one(p)
+        .await?
+        .get::<i32, _>(0))
+    }
+
     async fn mask_table(
         &self,
         masker_entity: &masker::Entity,
         p: &sqlx::MySqlPool,
     ) -> Result<(), Box<dyn std::error::Error + Sync + Send>> {
-        let b_size = 30;
-        let mut offs_idx = 0;
-        loop {
+        let sz_total = self.get_total_size(masker_entity, p).await?;
+        let b_size = 1000;
+        let iterations: f32 = sz_total as f32 / b_size as f32;
+        let futs = (0..iterations.ceil() as i32).map(move |offs_idx| async move {
             let ids = self
                 .get_batch_to_update(masker_entity, p, b_size, offs_idx * b_size)
-                .await?;
+                .await
+                .unwrap();
             if ids.is_empty() {
-                break;
+                return;
             }
-            let mut tx = p.begin().await?;
+            let mut tx = p.begin().await.unwrap();
             for id in ids {
                 sqlx::query(
-                    self.prepare_entity_query(masker_entity, Box::new(id))?
+                    self.prepare_entity_query(masker_entity, Box::new(id))
+                        .unwrap()
                         .as_str(),
                 )
                 .execute(&mut *tx)
-                .await?;
+                .await
+                .unwrap();
             }
-            tx.commit().await?;
-            offs_idx += 1;
-        }
+            tx.commit().await.unwrap()
+        });
+        futures::future::join_all(futs).await;
         Ok(())
     }
 }

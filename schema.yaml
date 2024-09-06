@@ -5,17 +5,17 @@ db:
     password: root
     host: localhost
     port: 3306
-    db_name: classicmodels 
+    db_name: employees 
 schemas:
-  - table: customers
+  - table: employees
     pk:
-      name: customerNumber
+      name: emp_no
       type: int
     fields:
-      - name: contactFirstName
+      - name: first_name
         kind: FirstName
-      - name: contactLastName
+      - name: last_name
         kind: LastName
-      - name: customerName
-        kind: Template
-        template: "Company nr {id}"
+      # - name: customerName
+      #   kind: Template
+      #   template: "Company nr {id}"
