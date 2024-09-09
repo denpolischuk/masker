@@ -1,4 +1,7 @@
-use crate::masker::transformer::{Options, Transformer};
+use crate::masker::{
+    transformer::{Options, Transformer},
+    ConfigParseError, ConfigParseErrorKind,
+};
 
 use super::tranformer::GeneratedValue;
 pub struct TemplateTransformer {
@@ -31,10 +34,15 @@ impl Transformer for TemplateTransformer {
     fn read_parameters_from_yaml(
         &mut self,
         yaml: &serde_yaml::Value,
-    ) -> Result<(), Box<dyn std::error::Error + Sync + Send>> {
+    ) -> Result<(), ConfigParseError> {
         match yaml["template"].as_str() {
             Some(t) => self.template = t.to_string(),
-            None => return Err("Couldn't find a 'template' property for Template kind.".into()),
+            None => {
+                return Err(ConfigParseError {
+                    field: "template".to_string(),
+                    kind: ConfigParseErrorKind::MissingField,
+                })
+            }
         }
 
         Ok(())

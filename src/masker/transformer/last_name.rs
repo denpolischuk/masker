@@ -1,6 +1,9 @@
 use rand::Rng;
 
-use crate::masker::transformer::{Options, Transformer};
+use crate::masker::{
+    transformer::{Options, Transformer},
+    ConfigParseError,
+};
 
 use super::tranformer::GeneratedValue;
 const RANDOM_NAMES: &[&str] = &[
@@ -138,10 +141,7 @@ impl Transformer for LastNameTransformer {
         Ok(GeneratedValue::String(res.into()))
     }
 
-    fn read_parameters_from_yaml(
-        &mut self,
-        _: &serde_yaml::Value,
-    ) -> Result<(), Box<dyn std::error::Error + Sync + Send>> {
+    fn read_parameters_from_yaml(&mut self, _: &serde_yaml::Value) -> Result<(), ConfigParseError> {
         Ok(())
     }
 }

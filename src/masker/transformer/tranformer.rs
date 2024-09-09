@@ -1,4 +1,7 @@
-use crate::masker::transformer::{FirstNameTransformer, LastNameTransformer, TemplateTransformer};
+use crate::masker::{
+    transformer::{FirstNameTransformer, LastNameTransformer, TemplateTransformer},
+    ConfigParseError,
+};
 
 pub enum GeneratedValue {
     String(String),
@@ -9,7 +12,7 @@ pub trait Transformer: Sync + Send {
     fn read_parameters_from_yaml(
         &mut self,
         yaml: &serde_yaml::Value,
-    ) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
+    ) -> Result<(), ConfigParseError>;
     fn generate(
         &self,
         options: &Options,
@@ -20,9 +23,7 @@ pub struct Options {
     pub pk: Box<dyn ToString>,
 }
 
-pub fn new_from_yaml(
-    yaml: &serde_yaml::Value,
-) -> Result<Box<dyn Transformer>, Box<dyn std::error::Error + Sync + Send>> {
+pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Box<dyn Transformer>, ConfigParseError> {
     match yaml["kind"].as_str() {
         Some(s) => match s {
             "FirstName" => Ok(Box::new(FirstNameTransformer::new())),
@@ -33,11 +34,15 @@ pub fn new_from_yaml(
                 Ok(tr)
             }
             "MobilePhone" => todo!(),
-            _ => Err(format!("Found unknown field kind {}", s).into()),
+            _ => Err(ConfigParseError {
+                field: s.to_string(),
+                kind: crate::masker::ConfigParseErrorKind::UnknownField,
+            }),
         },
-        None => Err(
-            "Tried to read entry from a fields list, but couldn't locate 'kind' property".into(),
-        ),
+        None => Err(ConfigParseError {
+            field: String::from("kind"),
+            kind: crate::masker::ConfigParseErrorKind::MissingField,
+        }),
     }
 }
 
