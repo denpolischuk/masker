@@ -1,6 +1,6 @@
 use std::{error::Error, fmt::Display};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 #[non_exhaustive]
 pub struct ConfigParseError {
     pub field: String,
@@ -9,21 +9,16 @@ pub struct ConfigParseError {
 
 impl Display for ConfigParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.kind {
+        match &self.kind {
             ConfigParseErrorKind::MissingField => {
                 write!(f, "field {} is missing in the config", self.field)
             }
-            ConfigParseErrorKind::InvalidFieldType => {
-                write!(f, "field {} has invalid type", self.field)
+            ConfigParseErrorKind::UnexpectedFieldValue(s) => {
+                write!(f, "field {} has unexpected value {}", self.field, s)
             }
-            ConfigParseErrorKind::UnknownField => {
-                write!(
-                    f,
-                    "field {} is unknown but has been found in config",
-                    self.field
-                )
+            ConfigParseErrorKind::UnknownField(s) => {
+                write!(f, "field {} is unknown but has been found in config", s)
             }
-            _ => write!(f, "unkown error with field {}", self.field),
         }
     }
 }
@@ -34,10 +29,10 @@ impl Error for ConfigParseError {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 #[non_exhaustive]
 pub enum ConfigParseErrorKind {
     MissingField,
-    InvalidFieldType,
-    UnknownField,
+    UnexpectedFieldValue(String),
+    UnknownField(String),
 }

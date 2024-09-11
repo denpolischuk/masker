@@ -2,7 +2,10 @@ use std::fmt::Display;
 
 use crate::masker::transformer::{new_from_yaml, Options, Transformer};
 
-use super::transformer::GeneratedValue;
+use super::{
+    transformer::{GeneratedValue, TransformerError},
+    ConfigParseError, ConfigParseErrorKind,
+};
 
 pub struct Field {
     field_name: String,
@@ -17,22 +20,21 @@ impl Field {
         }
     }
 
-    pub fn generate(
-        &self,
-        opts: &Options,
-    ) -> Result<GeneratedValue, Box<dyn std::error::Error + Sync + Send>> {
+    pub fn generate(&self, opts: &Options) -> Result<GeneratedValue, TransformerError> {
         self.transformer.generate(opts)
     }
 
-    pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Self, Box<dyn std::error::Error>> {
-        let name =
-            match yaml["name"].as_str() {
-                Some(s) => String::from(s),
-                None => return Err(
-                    "Tried to read entry from a fields list, but couldn't locate 'name' property"
-                        .into(),
-                ),
-            };
+    pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Self, ConfigParseError> {
+        let field_name = String::from("name");
+        let name = match yaml[field_name.as_str()].as_str() {
+            Some(s) => String::from(s),
+            None => {
+                return Err(ConfigParseError {
+                    kind: ConfigParseErrorKind::MissingField,
+                    field: field_name,
+                })
+            }
+        };
         let transformer = new_from_yaml(yaml).unwrap();
         Ok(Self::new(name, transformer))
     }

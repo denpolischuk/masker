@@ -5,7 +5,7 @@ use crate::masker::{
     ConfigParseError,
 };
 
-use super::tranformer::GeneratedValue;
+use super::{tranformer::GeneratedValue, TransformerError};
 const RANDOM_NAMES: &[&str] = &[
     "Alice", "Bob", "Charlie", "Diana", "Ethan", "Fiona", "George", "Hannah", "Isaac", "Jasmine",
     "Kevin", "Lena", "Mason", "Nina", "Oscar", "Piper", "Quinn", "Ruby", "Sam", "Tina", "Ulysses",
@@ -36,10 +36,7 @@ impl Default for FirstNameTransformer {
 }
 
 impl Transformer for FirstNameTransformer {
-    fn generate(
-        &self,
-        _: &Options,
-    ) -> Result<GeneratedValue, Box<dyn std::error::Error + Sync + Send>> {
+    fn generate(&self, _: &Options) -> Result<GeneratedValue, TransformerError> {
         let rand_i = rand::thread_rng().gen_range(0..RANDOM_NAMES_SIZE - 1);
         let res = RANDOM_NAMES[rand_i];
 

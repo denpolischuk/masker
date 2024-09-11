@@ -1,6 +1,8 @@
 use crate::masker::Field;
 use std::{borrow::Borrow, fmt::Display, vec};
 
+use super::ConfigParseError;
+
 pub enum PkType {
     Int,
     String,
@@ -23,36 +25,61 @@ impl Entity {
         }
     }
 
-    pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Self, Box<dyn std::error::Error>> {
-        let s_name = match yaml["table"].as_str() {
+    pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Self, ConfigParseError> {
+        let field = String::from("table");
+        let s_name = match yaml[field.as_str()].as_str() {
             Some(s) => String::from(s),
-            None => return Err("Missing or invalid 'table' entry in YAML file".into()),
+            None => {
+                return Err(ConfigParseError {
+                    kind: super::ConfigParseErrorKind::MissingField,
+                    field,
+                })
+            }
         };
 
         let s_pk_name = match yaml["pk"]["name"].as_str() {
             Some(s) => String::from(s),
-            None => return Err("Missing or invalid 'pk.type' entry in YAML file. You should specify primary key name and type [int string]".into()),
+            None => {
+                return Err(ConfigParseError {
+                    kind: super::ConfigParseErrorKind::MissingField,
+                    field: String::from("pk.name"),
+                })
+            }
         };
 
         let s_pk_type = match yaml["pk"]["type"].as_str() {
             Some(s) => match s {
                 "int" => PkType::Int,
                 "string" => PkType::String,
-                other => return Err(format!("Unknown primary key type 'pk.type' {}", other).into()),
+                other => {
+                    return Err(ConfigParseError {
+                        kind: super::ConfigParseErrorKind::UnexpectedFieldValue(String::from(
+                            other,
+                        )),
+                        field: String::from("pk.type"),
+                    })
+                }
+            },
+            None => {
+                return Err(ConfigParseError {
+                    kind: super::ConfigParseErrorKind::MissingField,
+                    field: String::from("pk.type"),
+                })
             }
-            None => return Err("Missing or invalid 'pk.type' entry in YAML file. You should specify primary key name and type [int string]".into()),
         };
 
         let mut s_entries: Vec<Field> = vec::Vec::new();
-        match yaml["fields"].as_sequence() {
+        let field = "fields";
+        match yaml[field].as_sequence() {
             Some(seq) => seq
                 .iter()
                 .for_each(|entry| s_entries.push(Field::new_from_yaml(entry).unwrap())), // It's
             // ok to unwrap here, because we want to panic on corrupted yaml schema
             None => {
-                return Err(
-                    "Missing or invalid 'fields' entry in the YAML file. Nothing to map".into(),
-                )
+                return Err(ConfigParseError {
+                    kind: super::ConfigParseErrorKind::MissingField,
+                    field: String::from(field),
+                })
             }
         };
 

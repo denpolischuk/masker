@@ -3,6 +3,8 @@ use crate::masker::{
     ConfigParseError,
 };
 
+use super::TransformerError;
+
 pub enum GeneratedValue {
     String(String),
     Number(String),
@@ -13,10 +15,7 @@ pub trait Transformer: Sync + Send {
         &mut self,
         yaml: &serde_yaml::Value,
     ) -> Result<(), ConfigParseError>;
-    fn generate(
-        &self,
-        options: &Options,
-    ) -> Result<GeneratedValue, Box<dyn std::error::Error + Sync + Send>>;
+    fn generate(&self, options: &Options) -> Result<GeneratedValue, TransformerError>;
 }
 
 pub struct Options {
@@ -34,9 +33,9 @@ pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Box<dyn Transformer>, C
                 Ok(tr)
             }
             "MobilePhone" => todo!(),
-            _ => Err(ConfigParseError {
+            field => Err(ConfigParseError {
                 field: s.to_string(),
-                kind: crate::masker::ConfigParseErrorKind::UnknownField,
+                kind: crate::masker::ConfigParseErrorKind::UnknownField(String::from(field)),
             }),
         },
         None => Err(ConfigParseError {
@@ -48,29 +47,42 @@ pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Box<dyn Transformer>, C
 
 #[cfg(test)]
 mod tests {
-    use crate::masker::transformer::new_from_yaml;
+    use crate::masker::{transformer::new_from_yaml, ConfigParseError};
 
     #[test]
-    fn get_transformer_from_yaml() -> Result<(), Box<dyn std::error::Error + Sync + Send>> {
+    fn get_transformer_from_yaml() -> Result<(), ConfigParseError> {
         let yaml = serde_yaml::from_str("kind: LastName").unwrap();
         _ = new_from_yaml(&yaml)?;
         Ok(())
     }
 
     #[test]
-    fn fail_on_missing_kind() {
-        let yaml = serde_yaml::from_str("kind: SomethingElse").unwrap();
-        match new_from_yaml(&yaml) {
-            Ok(_) => panic!("Expected error, but got Ok(Transformer) instead"),
-            Err(e) => assert!(e.to_string().contains("unknown field kind")),
-        }
+    fn fail_on_unknown_kind() {
+        let field = "SomethingElse";
+        let yaml = serde_yaml::from_str(format!("kind: {field}").as_str()).unwrap();
+        let err = new_from_yaml(&yaml)
+            .err()
+            .expect("expected to get error on parse, got transformer instead");
+        assert_eq!(
+            err,
+            ConfigParseError {
+                field: String::from(field),
+                kind: crate::masker::ConfigParseErrorKind::UnknownField(String::from(field)),
+            }
+        )
     }
     #[test]
-    fn fail_on_unknown_kind() {
+    fn fail_on_missing_kind() {
         let yaml = serde_yaml::from_str("some_other_key: SomethingElse").unwrap();
-        match new_from_yaml(&yaml) {
-            Ok(_) => panic!("Expected error, but got Ok(Transformer) instead"),
-            Err(e) => assert!(e.to_string().contains("couldn't locate 'kind'")),
-        }
+        let err = new_from_yaml(&yaml)
+            .err()
+            .expect("expected to get error on parse, got transformer instead");
+        assert_eq!(
+            err,
+            ConfigParseError {
+                field: String::from("kind"),
+                kind: crate::masker::ConfigParseErrorKind::MissingField,
+            }
+        )
     }
 }

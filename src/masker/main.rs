@@ -1,5 +1,7 @@
 use crate::masker::Entity;
 
+use super::ConfigParseError;
+
 pub struct Masker {
     entities: Vec<Entity>,
 }
@@ -9,17 +11,22 @@ impl Masker {
         Masker { entities }
     }
 
-    pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Self, ConfigParseError> {
         let mut schemas: Vec<Entity> = vec![];
-        match yaml["schemas"].as_sequence() {
-            Some(seq) => {
-                seq.iter()
-                    .try_for_each(|schema_yaml| -> Result<(), Box<dyn std::error::Error>> {
-                        schemas.push(Entity::new_from_yaml(schema_yaml)?);
-                        Ok(())
-                    })
+        let field = "schemas";
+        match yaml[field].as_sequence() {
+            Some(seq) => seq
+                .iter()
+                .try_for_each(|schema_yaml| -> Result<(), ConfigParseError> {
+                    schemas.push(Entity::new_from_yaml(schema_yaml)?);
+                    Ok(())
+                }),
+            None => {
+                return Err(ConfigParseError {
+                    kind: super::ConfigParseErrorKind::MissingField,
+                    field: String::from(field),
+                })
             }
-            None => return Err("Missing schemas definition in yaml.".into()),
         }?;
         Ok(Masker::new(schemas))
     }

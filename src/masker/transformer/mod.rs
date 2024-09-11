@@ -1,8 +1,10 @@
+mod error;
 mod first_name;
 mod from_template;
 mod last_name;
 mod tranformer;
 
+pub use error::TransformerError;
 pub use first_name::FirstNameTransformer;
 pub use from_template::TemplateTransformer;
 pub use last_name::LastNameTransformer;

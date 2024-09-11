@@ -3,7 +3,7 @@ use crate::masker::{
     ConfigParseError, ConfigParseErrorKind,
 };
 
-use super::tranformer::GeneratedValue;
+use super::{tranformer::GeneratedValue, TransformerError};
 pub struct TemplateTransformer {
     template: String,
 }
@@ -23,10 +23,7 @@ impl Default for TemplateTransformer {
 }
 
 impl Transformer for TemplateTransformer {
-    fn generate(
-        &self,
-        opts: &Options,
-    ) -> Result<GeneratedValue, Box<dyn std::error::Error + Sync + Send>> {
+    fn generate(&self, opts: &Options) -> Result<GeneratedValue, TransformerError> {
         let res = self.template.replace("{id}", opts.pk.to_string().as_str());
         Ok(GeneratedValue::String(res))
     }
