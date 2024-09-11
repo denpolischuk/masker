@@ -185,9 +185,8 @@ impl DatabaseAdapter for MySQLAdapter {
             .get_entities()
             .iter()
             .map(|entity| self.mask_table(entity, &pool));
-        join_all(futs).await;
-
-        Ok(())
+        let res: Result<Vec<()>, DatabaseAdapterError> = join_all(futs).await.into_iter().collect();
+        res.map(|_| ())
     }
 }
 
