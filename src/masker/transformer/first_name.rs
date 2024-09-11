@@ -1,8 +1,8 @@
 use rand::Rng;
 
 use crate::masker::{
+    error::ConfigParseError,
     transformer::{Options, Transformer},
-    ConfigParseError,
 };
 
 use super::{tranformer::GeneratedValue, TransformerError};

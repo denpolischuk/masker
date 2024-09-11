@@ -1,6 +1,6 @@
 use crate::masker::{
+    error::{ConfigParseError, ConfigParseErrorKind},
     transformer::{Options, Transformer},
-    ConfigParseError, ConfigParseErrorKind,
 };
 
 use super::{tranformer::GeneratedValue, TransformerError};

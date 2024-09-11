@@ -3,8 +3,8 @@ use std::fmt::Display;
 use crate::masker::transformer::{new_from_yaml, Options, Transformer};
 
 use super::{
+    error::{ConfigParseError, ConfigParseErrorKind},
     transformer::{GeneratedValue, TransformerError},
-    ConfigParseError, ConfigParseErrorKind,
 };
 
 pub struct Field {

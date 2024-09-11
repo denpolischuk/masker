@@ -1,6 +1,6 @@
 use crate::masker::Entity;
 
-use super::ConfigParseError;
+use super::error::{ConfigParseError, ConfigParseErrorKind};
 
 pub struct Masker {
     entities: Vec<Entity>,
@@ -23,7 +23,7 @@ impl Masker {
                 }),
             None => {
                 return Err(ConfigParseError {
-                    kind: super::ConfigParseErrorKind::MissingField,
+                    kind: ConfigParseErrorKind::MissingField,
                     field: String::from(field),
                 })
             }

@@ -1,6 +1,6 @@
 use crate::masker::{
+    error::{ConfigParseError, ConfigParseErrorKind},
     transformer::{FirstNameTransformer, LastNameTransformer, TemplateTransformer},
-    ConfigParseError,
 };
 
 use super::TransformerError;
@@ -35,19 +35,22 @@ pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Box<dyn Transformer>, C
             "MobilePhone" => todo!(),
             field => Err(ConfigParseError {
                 field: s.to_string(),
-                kind: crate::masker::ConfigParseErrorKind::UnknownField(String::from(field)),
+                kind: ConfigParseErrorKind::UnknownField(String::from(field)),
             }),
         },
         None => Err(ConfigParseError {
             field: String::from("kind"),
-            kind: crate::masker::ConfigParseErrorKind::MissingField,
+            kind: ConfigParseErrorKind::MissingField,
         }),
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::masker::{transformer::new_from_yaml, ConfigParseError};
+    use crate::masker::{
+        error::{ConfigParseError, ConfigParseErrorKind},
+        transformer::new_from_yaml,
+    };
 
     #[test]
     fn get_transformer_from_yaml() -> Result<(), ConfigParseError> {
@@ -67,7 +70,7 @@ mod tests {
             err,
             ConfigParseError {
                 field: String::from(field),
-                kind: crate::masker::ConfigParseErrorKind::UnknownField(String::from(field)),
+                kind: ConfigParseErrorKind::UnknownField(String::from(field)),
             }
         )
     }
@@ -81,7 +84,7 @@ mod tests {
             err,
             ConfigParseError {
                 field: String::from("kind"),
-                kind: crate::masker::ConfigParseErrorKind::MissingField,
+                kind: ConfigParseErrorKind::MissingField,
             }
         )
     }

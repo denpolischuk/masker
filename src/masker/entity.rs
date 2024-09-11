@@ -1,7 +1,7 @@
 use crate::masker::Field;
 use std::{borrow::Borrow, fmt::Display, vec};
 
-use super::ConfigParseError;
+use super::error::{ConfigParseError, ConfigParseErrorKind};
 
 pub enum PkType {
     Int,
@@ -31,7 +31,7 @@ impl Entity {
             Some(s) => String::from(s),
             None => {
                 return Err(ConfigParseError {
-                    kind: super::ConfigParseErrorKind::MissingField,
+                    kind: ConfigParseErrorKind::MissingField,
                     field,
                 })
             }
@@ -41,7 +41,7 @@ impl Entity {
             Some(s) => String::from(s),
             None => {
                 return Err(ConfigParseError {
-                    kind: super::ConfigParseErrorKind::MissingField,
+                    kind: ConfigParseErrorKind::MissingField,
                     field: String::from("pk.name"),
                 })
             }
@@ -53,16 +53,14 @@ impl Entity {
                 "string" => PkType::String,
                 other => {
                     return Err(ConfigParseError {
-                        kind: super::ConfigParseErrorKind::UnexpectedFieldValue(String::from(
-                            other,
-                        )),
+                        kind: ConfigParseErrorKind::UnexpectedFieldValue(String::from(other)),
                         field: String::from("pk.type"),
                     })
                 }
             },
             None => {
                 return Err(ConfigParseError {
-                    kind: super::ConfigParseErrorKind::MissingField,
+                    kind: ConfigParseErrorKind::MissingField,
                     field: String::from("pk.type"),
                 })
             }
@@ -77,7 +75,7 @@ impl Entity {
             // ok to unwrap here, because we want to panic on corrupted yaml schema
             None => {
                 return Err(ConfigParseError {
-                    kind: super::ConfigParseErrorKind::MissingField,
+                    kind: ConfigParseErrorKind::MissingField,
                     field: String::from(field),
                 })
             }
