@@ -1,5 +1,4 @@
-use mysql::serde::de::Error;
-use serde_yaml::Error as YamlError;
+use crate::masker::error::ConfigParseError;
 pub struct MySQLConnectionCredentials {
     host: String,
     username: String,
@@ -26,56 +25,84 @@ impl MySQLConnectionCredentials {
     }
     pub fn from_yaml(
         yaml: &serde_yaml::Value,
-    ) -> Result<MySQLConnectionCredentials, serde_yaml::Error> {
+    ) -> Result<MySQLConnectionCredentials, ConfigParseError> {
         match yaml["connection"].as_mapping() {
             Some(m) => {
+                let field = String::from("host");
                 let host = m
-                    .get("host")
-                    .ok_or(YamlError::missing_field(
-                        "Couldn't find 'host' in DB connection credentials",
-                    ))?
+                    .get(&field)
+                    .ok_or(ConfigParseError {
+                        kind: crate::masker::error::ConfigParseErrorKind::MissingField,
+                        field: field.clone(),
+                    })?
                     .as_str()
-                    .ok_or(YamlError::custom("Couldn't convert host to string"))?
+                    .ok_or(ConfigParseError {
+                        kind: crate::masker::error::ConfigParseErrorKind::UnexpectedFieldType,
+                        field,
+                    })?
                     .to_string();
+                let field = String::from("username");
                 let username = m
-                    .get("username")
-                    .ok_or(YamlError::missing_field(
-                        "Couldn't find 'username' in DB connection credentials.",
-                    ))?
+                    .get(&field)
+                    .ok_or(ConfigParseError {
+                        kind: crate::masker::error::ConfigParseErrorKind::MissingField,
+                        field: field.clone(),
+                    })?
                     .as_str()
-                    .ok_or(YamlError::custom("Couldn't convert username to string."))?
+                    .ok_or(ConfigParseError {
+                        kind: crate::masker::error::ConfigParseErrorKind::UnexpectedFieldType,
+                        field,
+                    })?
                     .to_string();
+                let field = String::from("password");
                 let password = m
-                    .get("password")
-                    .ok_or(YamlError::missing_field(
-                        "Couldn't find 'password' in DB connection credentials.",
-                    ))?
+                    .get(&field)
+                    .ok_or(ConfigParseError {
+                        kind: crate::masker::error::ConfigParseErrorKind::MissingField,
+                        field: field.clone(),
+                    })?
                     .as_str()
-                    .ok_or(YamlError::custom("Couldn't convert password to string."))?
+                    .ok_or(ConfigParseError {
+                        kind: crate::masker::error::ConfigParseErrorKind::UnexpectedFieldType,
+                        field,
+                    })?
                     .to_string();
+                let field = String::from("db_name");
                 let db_name = m
-                    .get("db_name")
-                    .ok_or(YamlError::missing_field(
-                        "Couldn't find 'db_name' in DB connection credentials.",
-                    ))?
+                    .get(&field)
+                    .ok_or(ConfigParseError {
+                        kind: crate::masker::error::ConfigParseErrorKind::MissingField,
+                        field: field.clone(),
+                    })?
                     .as_str()
-                    .ok_or(YamlError::custom("Couldn't convert db_name to string."))?
+                    .ok_or(ConfigParseError {
+                        kind: crate::masker::error::ConfigParseErrorKind::UnexpectedFieldType,
+                        field,
+                    })?
                     .to_string();
-                let port_node = m.get("port").ok_or(YamlError::missing_field(
-                    "Couldn't find 'port' in DB connection credentials.",
-                ))?;
-                let port = match port_node.as_i64() {
-                    Some(p_i64) => p_i64.to_string(),
-                    None => match port_node.as_str() {
-                        Some(p_str) => p_str.to_string(),
-                        None => return Err(YamlError::custom("Couldn't convert port to string.")),
-                    },
-                };
+                let field = String::from("port");
+                let port_node = m.get(&field).ok_or(ConfigParseError {
+                    kind: crate::masker::error::ConfigParseErrorKind::MissingField,
+                    field: field.clone(),
+                })?;
+                let port =
+                    match port_node.as_i64() {
+                        Some(p_i64) => p_i64.to_string(),
+                        None => match port_node.as_str() {
+                            Some(p_str) => p_str.to_string(),
+                            None => return Err(ConfigParseError {
+                                kind:
+                                    crate::masker::error::ConfigParseErrorKind::UnexpectedFieldType,
+                                field,
+                            }),
+                        },
+                    };
                 Ok(Self::new(host, username, password, db_name, port))
             }
-            None => Err(YamlError::missing_field(
-                "Couldn't find connection credentials at .connection in the yaml.",
-            )),
+            None => Err(ConfigParseError {
+                kind: crate::masker::error::ConfigParseErrorKind::MissingField,
+                field: String::from("connection"),
+            }),
         }
     }
 

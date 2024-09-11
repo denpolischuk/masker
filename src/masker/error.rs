@@ -19,6 +19,13 @@ impl Display for ConfigParseError {
             ConfigParseErrorKind::UnknownField(s) => {
                 write!(f, "field {} is unknown but has been found in config", s)
             }
+            ConfigParseErrorKind::UnexpectedFieldType => {
+                write!(
+                    f,
+                    "field {} is of unexpected type and the value couldn't be parsed",
+                    self.field
+                )
+            }
         }
     }
 }
@@ -35,4 +42,5 @@ pub enum ConfigParseErrorKind {
     MissingField,
     UnexpectedFieldValue(String),
     UnknownField(String),
+    UnexpectedFieldType,
 }

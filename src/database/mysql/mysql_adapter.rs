@@ -5,6 +5,8 @@ use sqlx::Row;
 use std::sync::Arc;
 
 use crate::database::adapter::DatabaseAdapter;
+use crate::database::error::{DatabaseAdapterError, DatabaseAdapterErrorKind};
+use crate::masker::error::ConfigParseError;
 use crate::masker::transformer::Options;
 use crate::masker::{self, PkType};
 
@@ -13,9 +15,7 @@ pub struct MySQLAdapter {
 }
 
 impl MySQLAdapter {
-    pub fn new_from_yaml(
-        yaml: &serde_yaml::Value,
-    ) -> Result<Self, Box<dyn std::error::Error + Sync + Send>> {
+    pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Self, ConfigParseError> {
         let connection_creds = MySQLConnectionCredentials::from_yaml(yaml)?;
         Ok(MySQLAdapter { connection_creds })
     }
@@ -24,8 +24,11 @@ impl MySQLAdapter {
         &self,
         masker: Arc<masker::Masker>,
         p: &sqlx::MySqlPool,
-    ) -> Result<(), Box<dyn std::error::Error + Sync + Send>> {
-        let rows = sqlx::query("SHOW TABLES;").fetch_all(p).await?;
+    ) -> Result<(), DatabaseAdapterError> {
+        let rows = sqlx::query("SHOW TABLES;")
+            .fetch_all(p)
+            .await
+            .map_err(DatabaseAdapterError::failed_query)?;
 
         let db_tables: Vec<String> = rows.iter().map(|r| r.get::<String, _>(0)).collect();
 
@@ -40,7 +43,7 @@ impl MySQLAdapter {
         }) {
             Ok(())
         } else {
-            Err(format!("Some entities that were defined in yaml config were not found in the actual DB: {}", missing_t).into())
+            Err(DatabaseAdapterError::inconsistent_schema(missing_t))
         }
     }
 
@@ -48,17 +51,23 @@ impl MySQLAdapter {
         &self,
         masker_entity: &masker::Entity,
         id: Box<dyn ToString>,
-    ) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
+    ) -> Result<String, DatabaseAdapterError> {
         let entity_fields = masker_entity.get_entries();
         if entity_fields.is_empty() {
-            return Err(format!("Entity {} doesn't have any fields to mask. Either remove the entity from config or add fields that should be masked", masker_entity.get_table_name().as_str()).into());
+            return Err(DatabaseAdapterError {
+                kind: DatabaseAdapterErrorKind::NoEntriesSpecifiedForEntity(
+                    masker_entity.get_table_name(),
+                ),
+            });
         }
         let opts = Options {
             pk: Box::new(id.to_string()),
         };
         let mut values: Vec<String> = vec![];
         for entry in entity_fields {
-            let val = entry.generate(&opts)?;
+            let val = entry.generate(&opts).map_err(|e| {
+                DatabaseAdapterError::failed_to_mask(String::from(entry.get_column_name()), e)
+            })?;
             let str_v = match val {
                 masker::transformer::GeneratedValue::String(v) => format!("'{}'", v),
                 masker::transformer::GeneratedValue::Number(v) => v,
@@ -109,7 +118,7 @@ impl MySQLAdapter {
         &self,
         masker_entity: &masker::Entity,
         p: &sqlx::MySqlPool,
-    ) -> Result<i32, Box<dyn std::error::Error + Sync + Send>> {
+    ) -> Result<i32, sqlx::Error> {
         Ok(sqlx::query(
             format!(
                 "SELECT COUNT({}) FROM {};",
@@ -127,8 +136,11 @@ impl MySQLAdapter {
         &self,
         masker_entity: &masker::Entity,
         p: &sqlx::MySqlPool,
-    ) -> Result<(), Box<dyn std::error::Error + Sync + Send>> {
-        let sz_total = self.get_total_size(masker_entity, p).await?;
+    ) -> Result<(), DatabaseAdapterError> {
+        let sz_total = self
+            .get_total_size(masker_entity, p)
+            .await
+            .map_err(DatabaseAdapterError::failed_query)?;
         let b_size = 1000;
         let iterations: f32 = sz_total as f32 / b_size as f32;
         let futs = (0..iterations.ceil() as i32).map(move |offs_idx| async move {
@@ -162,11 +174,12 @@ impl DatabaseAdapter for MySQLAdapter {
     async fn apply_mask(
         &self,
         masker: Arc<crate::masker::Masker>,
-    ) -> Result<(), Box<dyn std::error::Error + Sync + Send>> {
+    ) -> Result<(), DatabaseAdapterError> {
         let pool = sqlx::mysql::MySqlPoolOptions::new()
             .max_connections(5)
             .connect(self.connection_creds.get_as_string().as_str())
-            .await?;
+            .await
+            .map_err(DatabaseAdapterError::connection_error)?;
         self.verify_entities(masker.clone(), &pool).await?;
         let futs = masker
             .get_entities()

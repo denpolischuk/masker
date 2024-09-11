@@ -1,5 +1,5 @@
 mod entity;
-mod error;
+pub mod error;
 mod field;
 mod main;
 pub use entity::{Entity, PkType};
