@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, pin::Pin};
 
 use crate::masker::transformer::{new_from_yaml, Options, Transformer};
 
@@ -9,11 +9,11 @@ use super::{
 
 pub struct Field {
     field_name: String,
-    transformer: Box<dyn Transformer>,
+    transformer: Pin<Box<dyn Transformer>>,
 }
 
 impl Field {
-    pub fn new(field_name: String, transformer: Box<dyn Transformer>) -> Self {
+    pub fn new(field_name: String, transformer: Pin<Box<dyn Transformer>>) -> Self {
         Self {
             field_name,
             transformer,

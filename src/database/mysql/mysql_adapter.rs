@@ -222,8 +222,8 @@ mod tests {
         let t_name = "table";
         let pk_name = "id";
         let fields: Vec<Field> = vec![
-            Field::new("name".to_string(), Box::new(FirstNameTransformer {})),
-            Field::new("last_name".to_string(), Box::new(FirstNameTransformer {})),
+            Field::new("name".to_string(), Box::pin(FirstNameTransformer {})),
+            Field::new("last_name".to_string(), Box::pin(FirstNameTransformer {})),
         ];
         let entity = Entity::new(t_name.to_string(), pk_name.to_string(), PkType::Int, fields);
         let id = 123;
@@ -241,8 +241,8 @@ mod tests {
         let t_name = "table";
         let pk_name = "id";
         let fields: Vec<Field> = vec![
-            Field::new("name".to_string(), Box::new(FirstNameTransformer {})),
-            Field::new("last_name".to_string(), Box::new(FirstNameTransformer {})),
+            Field::new("name".to_string(), Box::pin(FirstNameTransformer {})),
+            Field::new("last_name".to_string(), Box::pin(FirstNameTransformer {})),
         ];
         let entity = Entity::new(
             t_name.to_string(),
@@ -283,7 +283,7 @@ mod tests {
         let field_name = "contactFirstName";
         let fields: Vec<Field> = vec![Field::new(
             field_name.to_string(),
-            Box::new(FirstNameTransformer {}),
+            Box::pin(FirstNameTransformer {}),
         )];
         let entity = Entity::new(t_name.to_string(), pk_name.to_string(), PkType::Int, fields);
         let pool = get_test_conn().await;
