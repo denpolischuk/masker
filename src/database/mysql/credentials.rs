@@ -1,4 +1,4 @@
-use crate::masker::error::ConfigParseError;
+use crate::{database::shared, masker::error::ConfigParseError};
 pub struct MySQLConnectionCredentials {
     host: String,
     username: String,
@@ -28,75 +28,11 @@ impl MySQLConnectionCredentials {
     ) -> Result<MySQLConnectionCredentials, ConfigParseError> {
         match yaml["connection"].as_mapping() {
             Some(m) => {
-                let field = String::from("host");
-                let host = m
-                    .get(&field)
-                    .ok_or(ConfigParseError {
-                        kind: crate::masker::error::ConfigParseErrorKind::MissingField,
-                        field: field.clone(),
-                    })?
-                    .as_str()
-                    .ok_or(ConfigParseError {
-                        kind: crate::masker::error::ConfigParseErrorKind::UnexpectedFieldType,
-                        field,
-                    })?
-                    .to_string();
-                let field = String::from("username");
-                let username = m
-                    .get(&field)
-                    .ok_or(ConfigParseError {
-                        kind: crate::masker::error::ConfigParseErrorKind::MissingField,
-                        field: field.clone(),
-                    })?
-                    .as_str()
-                    .ok_or(ConfigParseError {
-                        kind: crate::masker::error::ConfigParseErrorKind::UnexpectedFieldType,
-                        field,
-                    })?
-                    .to_string();
-                let field = String::from("password");
-                let password = m
-                    .get(&field)
-                    .ok_or(ConfigParseError {
-                        kind: crate::masker::error::ConfigParseErrorKind::MissingField,
-                        field: field.clone(),
-                    })?
-                    .as_str()
-                    .ok_or(ConfigParseError {
-                        kind: crate::masker::error::ConfigParseErrorKind::UnexpectedFieldType,
-                        field,
-                    })?
-                    .to_string();
-                let field = String::from("db_name");
-                let db_name = m
-                    .get(&field)
-                    .ok_or(ConfigParseError {
-                        kind: crate::masker::error::ConfigParseErrorKind::MissingField,
-                        field: field.clone(),
-                    })?
-                    .as_str()
-                    .ok_or(ConfigParseError {
-                        kind: crate::masker::error::ConfigParseErrorKind::UnexpectedFieldType,
-                        field,
-                    })?
-                    .to_string();
-                let field = String::from("port");
-                let port_node = m.get(&field).ok_or(ConfigParseError {
-                    kind: crate::masker::error::ConfigParseErrorKind::MissingField,
-                    field: field.clone(),
-                })?;
-                let port =
-                    match port_node.as_i64() {
-                        Some(p_i64) => p_i64.to_string(),
-                        None => match port_node.as_str() {
-                            Some(p_str) => p_str.to_string(),
-                            None => return Err(ConfigParseError {
-                                kind:
-                                    crate::masker::error::ConfigParseErrorKind::UnexpectedFieldType,
-                                field,
-                            }),
-                        },
-                    };
+                let host = shared::read_str_field(m, String::from("host"))?;
+                let username = shared::read_str_field(m, String::from("username"))?;
+                let password = shared::read_str_field(m, String::from("password"))?;
+                let db_name = shared::read_str_field(m, String::from("db_name"))?;
+                let port = shared::read_str_or_int_field(m, String::from("port"))?;
                 Ok(Self::new(host, username, password, db_name, port))
             }
             None => Err(ConfigParseError {

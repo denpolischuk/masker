@@ -1,4 +1,4 @@
-use std::{error::Error, fmt::Display};
+use std::{env::VarError, error::Error, fmt::Display};
 
 #[derive(Debug, PartialEq)]
 #[non_exhaustive]
@@ -26,13 +26,23 @@ impl Display for ConfigParseError {
                     self.field
                 )
             }
+            ConfigParseErrorKind::FailedToReadValueFromEnv(key, _) => {
+                write!(
+                    f,
+                    "couldn't read value from env by key {key} for field {}",
+                    self.field
+                )
+            }
         }
     }
 }
 
 impl Error for ConfigParseError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
-        None
+        match &self.kind {
+            ConfigParseErrorKind::FailedToReadValueFromEnv(_, e) => e.source(),
+            _ => None,
+        }
     }
 }
 
@@ -43,4 +53,5 @@ pub enum ConfigParseErrorKind {
     UnexpectedFieldValue(String),
     UnknownField(String),
     UnexpectedFieldType,
+    FailedToReadValueFromEnv(String, VarError),
 }
