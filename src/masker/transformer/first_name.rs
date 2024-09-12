@@ -1,9 +1,6 @@
 use rand::Rng;
 
-use crate::masker::{
-    error::ConfigParseError,
-    transformer::{Options, Transformer},
-};
+use crate::masker::transformer::{Options, Transformer};
 
 use super::{tranformer::GeneratedValue, TransformerError};
 const RANDOM_NAMES: &[&str] = &[
@@ -46,9 +43,5 @@ impl Transformer for FirstNameTransformer {
         //     return Ok(String::from(RANDOM_NAMES[rand_i + 1]));
         // }
         Ok(GeneratedValue::String(res.to_string()))
-    }
-
-    fn read_parameters_from_yaml(&mut self, _: &serde_yaml::Value) -> Result<(), ConfigParseError> {
-        Ok(())
     }
 }

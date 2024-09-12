@@ -14,6 +14,18 @@ impl TemplateTransformer {
             template: template.clone(),
         }
     }
+
+    pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Self, ConfigParseError> {
+        match yaml["template"].as_str() {
+            Some(t) => Ok(Self {
+                template: t.to_string(),
+            }),
+            None => Err(ConfigParseError {
+                field: "template".to_string(),
+                kind: ConfigParseErrorKind::MissingField,
+            }),
+        }
+    }
 }
 
 impl Default for TemplateTransformer {
@@ -26,22 +38,5 @@ impl Transformer for TemplateTransformer {
     fn generate(&self, opts: &Options) -> Result<GeneratedValue, TransformerError> {
         let res = self.template.replace("{id}", opts.pk.to_string().as_str());
         Ok(GeneratedValue::String(res))
-    }
-
-    fn read_parameters_from_yaml(
-        &mut self,
-        yaml: &serde_yaml::Value,
-    ) -> Result<(), ConfigParseError> {
-        match yaml["template"].as_str() {
-            Some(t) => self.template = t.to_string(),
-            None => {
-                return Err(ConfigParseError {
-                    field: "template".to_string(),
-                    kind: ConfigParseErrorKind::MissingField,
-                })
-            }
-        }
-
-        Ok(())
     }
 }

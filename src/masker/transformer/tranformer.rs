@@ -11,10 +11,6 @@ pub enum GeneratedValue {
 }
 
 pub trait Transformer: Sync + Send {
-    fn read_parameters_from_yaml(
-        &mut self,
-        yaml: &serde_yaml::Value,
-    ) -> Result<(), ConfigParseError>;
     fn generate(&self, options: &Options) -> Result<GeneratedValue, TransformerError>;
 }
 
@@ -27,11 +23,7 @@ pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Box<dyn Transformer>, C
         Some(s) => match s {
             "FirstName" => Ok(Box::new(FirstNameTransformer::new())),
             "LastName" => Ok(Box::new(LastNameTransformer::new())),
-            "Template" => {
-                let mut tr = Box::new(TemplateTransformer::default());
-                tr.read_parameters_from_yaml(yaml)?;
-                Ok(tr)
-            }
+            "Template" => Ok(Box::new(TemplateTransformer::new_from_yaml(yaml)?)),
             "MobilePhone" => todo!(),
             field => Err(ConfigParseError {
                 field: s.to_string(),
