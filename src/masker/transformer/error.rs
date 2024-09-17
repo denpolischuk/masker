@@ -1,6 +1,6 @@
 use std::{error::Error, fmt::Display};
 
-use super::Transformer;
+use super::{from_template::TemplateParserError, Transformer};
 
 #[derive(Debug, PartialEq)]
 #[non_exhaustive]
@@ -12,17 +12,10 @@ pub struct TransformerError {
 impl Display for TransformerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.kind {
-            TransformerErrorKind::FailedToParseTemplate(template, start_at) => {
+            TransformerErrorKind::FailedToParseTempalteTransformer(_) => {
                 write!(
                     f,
-                    "transformer {} couldn't parse template {template}: couldn't find the end of sequence that was started at {start_at}",
-                    self.transformer_name
-                )
-            }
-            TransformerErrorKind::UnexpectedToken(template, start_at, token) => {
-                write!(
-                    f,
-                    "transformer {} couldn't parse template {template}: unexpected token {token} at position {start_at}",
+                    "couldn't parse template for transformer {}",
                     self.transformer_name
                 )
             }
@@ -51,6 +44,5 @@ impl Error for TransformerError {
 #[derive(Debug, PartialEq)]
 #[non_exhaustive]
 pub enum TransformerErrorKind {
-    FailedToParseTemplate(String, usize),
-    UnexpectedToken(String, usize, char),
+    FailedToParseTempalteTransformer(TemplateParserError),
 }
