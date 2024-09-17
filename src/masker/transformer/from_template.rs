@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 
-use super::{tranformer::GeneratedValue, TransformerError};
+use super::{GeneratedValue, TransformerError};
 use crate::masker::{
     error::{ConfigParseError, ConfigParseErrorKind},
     transformer::{Options, Transformer},
@@ -50,7 +50,7 @@ impl TemplateTransformer {
         }
     }
 
-    // State machine function that parses the template string, detectes variable tokens and creates
+    // State machine function that parses the template string, detects variable tokens and creates
     // a tokens vector out of them
     fn parse_variables(template: &String) -> Result<Vec<Token>, TransformerError> {
         let mut state = VariableParserState::Plain(0, '!');
