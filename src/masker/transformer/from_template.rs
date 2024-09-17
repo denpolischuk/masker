@@ -7,10 +7,18 @@ use crate::masker::{
 };
 
 #[derive(Debug, PartialEq)]
+enum TokenKind {
+    Variable(String),
+    CapitalLetterSeq(String),
+    LowerCaseLetterSeq(String),
+    DigitsSeq(String),
+}
+
+#[derive(Debug, PartialEq)]
 struct Token {
     start_p: usize,
     end_p: usize,
-    placeholder: String,
+    placeholder: TokenKind,
 }
 
 // Enum describes possible state of parser state machine.
@@ -18,8 +26,10 @@ struct Token {
 enum VariableParserState {
     Plain(usize, char),         // just string reading
     VarEntry(usize, char),      // '#' char detected
-    VarBlockStart(usize, char), // if '{' follows after '#'
-    VarTokenRead(usize, char),  // whatever comes after #{ and is alphanumerical or underscore
+    VarBlockStart(usize, char), // if '(' follows after '#'
+    VarTokenRead(usize, char),  // whatever comes after #( and is alphanumerical or underscore
+    SeqBlockStart(usize, char), // if '{' follows after '#'
+    SeqTokenRead(usize, char), // whatever comes after #( and is part of known rand sequence charset
 }
 
 pub struct TemplateTransformer {
@@ -50,6 +60,11 @@ impl TemplateTransformer {
         }
     }
 
+    // State machine function that parses random symbol sequences and creates tokens from them
+    fn parse_random_sequences(template: &String) -> Result<Vec<Token>, TransformerError> {
+        todo!()
+    }
+
     // State machine function that parses the template string, detects variable tokens and creates
     // a tokens vector out of them
     fn parse_variables(template: &String) -> Result<Vec<Token>, TransformerError> {
@@ -59,31 +74,31 @@ impl TemplateTransformer {
         let map_res: Result<Vec<()>, TransformerError> = template
             .char_indices()
             .map(|(ind, ch)| -> Result<(), TransformerError> {
-                state =
-                    match state {
-                        VariableParserState::Plain(_prev_ind, _prev_charr) => {
-                            if ch == '%' {
-                                tokens.push(Token {
-                                    start_p: ind,
-                                    end_p: 0,
-                                    placeholder: String::new(),
-                                });
-                                VariableParserState::VarEntry(ind, ch)
-                            } else {
-                                VariableParserState::Plain(ind, ch)
-                            }
+                state = match state {
+                    VariableParserState::Plain(_prev_ind, _prev_charr) => {
+                        if ch == '%' {
+                            tokens.push(Token {
+                                start_p: ind,
+                                end_p: 0,
+                                placeholder: TokenKind::Variable(String::new()),
+                            });
+                            VariableParserState::VarEntry(ind, ch)
+                        } else {
+                            VariableParserState::Plain(ind, ch)
                         }
-                        VariableParserState::VarEntry(_prev_ind, _prev_char) => {
-                            if ch == '(' {
-                                VariableParserState::VarBlockStart(ind, ch)
-                            } else {
-                                tokens.pop();
-                                VariableParserState::Plain(ind, ch)
-                            }
+                    }
+                    VariableParserState::VarEntry(_prev_ind, _prev_char) => {
+                        if ch == '(' {
+                            VariableParserState::VarBlockStart(ind, ch)
+                        } else {
+                            tokens.pop();
+                            VariableParserState::Plain(ind, ch)
                         }
-                        VariableParserState::VarBlockStart(_prev_ind, _prev_char) => {
-                            if ch.is_ascii_alphanumeric() || ch == '_' {
-                                let mut token = match tokens.pop() {
+                    }
+                    VariableParserState::VarBlockStart(_prev_ind, _prev_char) => {
+                        if ch.is_ascii_alphanumeric() || ch == '_' {
+                            let mut token =
+                                match tokens.pop() {
                                     Some(t) => t,
                                     None => return Err(TransformerError::new::<Self>(
                                         super::error::TransformerErrorKind::FailedToParseTemplate(
@@ -92,52 +107,61 @@ impl TemplateTransformer {
                                         ),
                                     )),
                                 };
-                                token.placeholder = String::from(ch);
-                                tokens.push(token);
-                                VariableParserState::VarTokenRead(ind, ch)
-                            } else {
-                                tokens.pop();
-                                VariableParserState::Plain(ind, ch)
-                            }
+                            token.placeholder = TokenKind::Variable(String::from(ch));
+                            tokens.push(token);
+                            VariableParserState::VarTokenRead(ind, ch)
+                        } else {
+                            tokens.pop();
+                            VariableParserState::Plain(ind, ch)
                         }
-                        VariableParserState::VarTokenRead(_prev_ind, _prev_char) => {
-                            if ch.is_ascii_alphanumeric() || ch == '_' {
-                                let mut token = match tokens.pop() {
-                                    Some(t) => t,
-                                    None => return Err(TransformerError::new::<Self>(
+                    }
+                    VariableParserState::VarTokenRead(_prev_ind, _prev_char) => {
+                        match tokens.pop() {
+                            Some(mut token) => match token.placeholder {
+                                TokenKind::Variable(placeholder) => {
+                                    if ch.is_ascii_alphanumeric() || ch == '_' {
+                                        token.placeholder =
+                                            TokenKind::Variable(format!("{}{}", placeholder, ch));
+                                        tokens.push(token);
+                                        VariableParserState::VarTokenRead(ind, ch)
+                                    } else if ch == ')' {
+                                        token.end_p = ind;
+                                        token.placeholder =
+                                            TokenKind::Variable(placeholder.clone());
+                                        tokens.push(token);
+                                        VariableParserState::Plain(ind, ch)
+                                    } else {
+                                        return Err(TransformerError::new::<Self>(
+                                            super::error::TransformerErrorKind::UnexpectedToken(
+                                                template.clone(),
+                                                ind,
+                                                ch,
+                                            ),
+                                        ));
+                                    }
+                                }
+                                _ => {
+                                    return Err(TransformerError::new::<Self>(
                                         super::error::TransformerErrorKind::FailedToParseTemplate(
                                             template.clone(),
                                             ind,
                                         ),
-                                    )),
-                                };
-                                token.placeholder = format!("{}{}", token.placeholder, ch);
-                                tokens.push(token);
-                                VariableParserState::VarTokenRead(ind, ch)
-                            } else if ch == ')' {
-                                let mut token = match tokens.pop() {
-                                    Some(t) => t,
-                                    None => return Err(TransformerError::new::<Self>(
-                                        super::error::TransformerErrorKind::FailedToParseTemplate(
-                                            template.clone(),
-                                            ind,
-                                        ),
-                                    )),
-                                };
-                                token.end_p = ind;
-                                tokens.push(token);
-                                VariableParserState::Plain(ind, ch)
-                            } else {
+                                    ))
+                                }
+                            },
+                            None => {
                                 return Err(TransformerError::new::<Self>(
-                                    super::error::TransformerErrorKind::UnexpectedToken(
+                                    super::error::TransformerErrorKind::FailedToParseTemplate(
                                         template.clone(),
                                         ind,
-                                        ch,
                                     ),
-                                ));
+                                ))
                             }
                         }
-                    };
+                    }
+                    VariableParserState::SeqBlockStart(_, _) => todo!(),
+                    VariableParserState::SeqTokenRead(_, _) => todo!(),
+                };
                 Ok(())
             })
             .collect();
@@ -165,7 +189,7 @@ impl Transformer for TemplateTransformer {
 mod tests {
     use crate::masker::transformer::error::TransformerErrorKind;
 
-    use super::{TemplateTransformer, Token};
+    use super::{TemplateTransformer, Token, TokenKind};
 
     #[test]
     fn it_parses_variables() {
@@ -174,7 +198,7 @@ mod tests {
         let exp = Token {
             start_p: 9,
             end_p: 13,
-            placeholder: String::from("id"),
+            placeholder: TokenKind::Variable(String::from("id")),
         };
 
         let res = TemplateTransformer::parse_variables(&template)
@@ -202,5 +226,12 @@ mod tests {
         let res = TemplateTransformer::parse_variables(&template).unwrap();
 
         assert!(res.is_empty());
+    }
+
+    #[test]
+    fn parses_random_sequences() {
+        let tpl = String::from("Company %{Llllll}-%{dd}");
+
+        let r = TemplateTransformer::parse_random_sequences(&tpl).unwrap();
     }
 }
