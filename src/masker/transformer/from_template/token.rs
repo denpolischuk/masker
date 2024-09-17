@@ -282,7 +282,7 @@ impl Token {
 
         // State machine should always endup in Plain state.
         // If state is something else, then it means that template is incorrect.
-        // Specifically this case covers sitautions like this template "Company #%{dd} %{Llll",
+        // Specifically this match covers sitautions like this template "Company #%{dd} %{Llll",
         // where last sequence is not ended with closing character }
         match state {
             VariableParserState::Plain(_, _) => Ok(tokens),
