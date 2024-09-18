@@ -1,4 +1,9 @@
-use super::token::Token;
+use rand::{distributions::Uniform, thread_rng, Rng};
+
+use super::{
+    token::{Token, TokenKind},
+    TemplateParserError,
+};
 use crate::masker::{
     error::{ConfigParseError, ConfigParseErrorKind},
     transformer::{
@@ -7,6 +12,9 @@ use crate::masker::{
 };
 
 pub struct TemplateTransformer {
+    upper_case_letters_set: Uniform<char>,
+    lower_case_letters_set: Uniform<char>,
+    digits_set: Uniform<char>,
     template: String,
     tokens: Vec<Token>,
 }
@@ -27,6 +35,9 @@ impl TemplateTransformer {
                     }
                 })?;
                 Ok(Self {
+                    upper_case_letters_set: Uniform::new(char::from(0x41), char::from(0x5a)),
+                    lower_case_letters_set: Uniform::new(char::from(0x61), char::from(0x7a)),
+                    digits_set: Uniform::new(char::from(0x30), char::from(0x39)),
                     template: t.to_string(),
                     tokens,
                 })
@@ -41,8 +52,27 @@ impl TemplateTransformer {
 
 impl Transformer for TemplateTransformer {
     fn generate(&self, opts: &Options) -> Result<GeneratedValue, TransformerError> {
-        let res = self.template.replace("{id}", opts.pk.to_string().as_str());
+        let resolved: Result<Vec<String>, TransformerError> = self
+            .tokens
+            .iter()
+            .map(|token| match &token.0 {
+                TokenKind::Plain(s) => Ok(s.clone()),
+                TokenKind::Variable(v) => match opts.get(v) {
+                    Some(val) => Ok(val.to_string()),
+                    None => {
+                        Err(
+                            TransformerError::new::<Self>(
+                                TransformerErrorKind::FailedToParseTempalteTransformer(TemplateParserError::new(super::error::TemplateParserErrorKind::FailedToResolveValueFromTemplate(self.template.clone(), v.clone())))
+                            )
+                        )
+                    },
+                },
+                TokenKind::CapitalLetterSeq(seq) => Ok(thread_rng().sample_iter(&self.upper_case_letters_set).take(seq.chars().count()).collect::<String>()),
+                TokenKind::LowerCaseLetterSeq(seq) => Ok(thread_rng().sample_iter(&self.lower_case_letters_set).take(seq.chars().count()).collect::<String>()),
+                TokenKind::DigitSeq(seq) => Ok(thread_rng().sample_iter(&self.digits_set).take(seq.chars().count()).collect::<String>()),
+            })
+            .collect();
 
-        Ok(GeneratedValue::String(res))
+        Ok(GeneratedValue::String(resolved?.join("")))
     }
 }

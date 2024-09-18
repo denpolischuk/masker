@@ -2,12 +2,12 @@ use super::credentials::MySQLConnectionCredentials;
 use async_trait::async_trait;
 use futures::future::join_all;
 use sqlx::Row;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::database::adapter::DatabaseAdapter;
 use crate::database::error::{DatabaseAdapterError, DatabaseAdapterErrorKind};
 use crate::masker::error::ConfigParseError;
-use crate::masker::transformer::Options;
 use crate::masker::{self, PkType};
 
 pub struct MySQLAdapter {
@@ -60,9 +60,8 @@ impl MySQLAdapter {
                 ),
             });
         }
-        let opts = Options {
-            pk: Box::new(id.to_string()),
-        };
+        let id = id.to_string();
+        let opts = HashMap::from([(masker_entity.get_pk_name(), &id)]);
         let mut values: Vec<String> = vec![];
         for entry in entity_fields {
             let val = entry.generate(&opts).map_err(|e| {
@@ -75,9 +74,9 @@ impl MySQLAdapter {
             values.push(format!("{} = {}", entry.get_column_name(), str_v));
         }
         let cond = match masker_entity.get_pk_type() {
-            PkType::Int => format!("{} = {}", masker_entity.get_pk_name(), id.to_string()),
+            PkType::Int => format!("{} = {}", masker_entity.get_pk_name(), id),
             PkType::String => {
-                format!("{} = '{}'", masker_entity.get_pk_name(), id.to_string())
+                format!("{} = '{}'", masker_entity.get_pk_name(), id)
             }
         };
         Ok(format!(

@@ -27,6 +27,12 @@ impl Display for TemplateParserError {
                     "couldn't parse template {template}: unrecognized sequence symbol {token} at position {start_at}",
                 )
             }
+            TemplateParserErrorKind::FailedToResolveValueFromTemplate(template, variable_name) => {
+                write!(
+                    f,
+                    "couldn't parse template {template}: failed to resolve value {variable_name}",
+                )
+            }
         }
     }
 }
@@ -49,4 +55,5 @@ pub enum TemplateParserErrorKind {
     FailedToParseTemplate(String, usize),
     UnexpectedToken(String, usize, char),
     UnrecognizedSequenceSymbol(String, usize, char),
+    FailedToResolveValueFromTemplate(String, String),
 }

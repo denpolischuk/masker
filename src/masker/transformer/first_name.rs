@@ -2,7 +2,7 @@ use rand::Rng;
 
 use crate::masker::transformer::{Options, Transformer};
 
-use super::{tranformer::GeneratedValue, TransformerError};
+use super::{transformer::GeneratedValue, TransformerError};
 const RANDOM_NAMES: &[&str] = &[
     "Alice", "Bob", "Charlie", "Diana", "Ethan", "Fiona", "George", "Hannah", "Isaac", "Jasmine",
     "Kevin", "Lena", "Mason", "Nina", "Oscar", "Piper", "Quinn", "Ruby", "Sam", "Tina", "Ulysses",

@@ -1,4 +1,4 @@
-use std::pin::Pin;
+use std::{collections::HashMap, pin::Pin};
 
 use crate::masker::{
     error::{ConfigParseError, ConfigParseErrorKind},
@@ -16,9 +16,7 @@ pub trait Transformer: Sync + Send {
     fn generate(&self, options: &Options) -> Result<GeneratedValue, TransformerError>;
 }
 
-pub struct Options {
-    pub pk: Box<dyn ToString>,
-}
+pub type Options<'a> = HashMap<&'a String, &'a String>;
 
 pub fn new_from_yaml(
     yaml: &serde_yaml::Value,
