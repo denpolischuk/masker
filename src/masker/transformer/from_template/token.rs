@@ -24,8 +24,8 @@ enum VariableParserState {
 }
 
 impl Token {
-    // State machine function that parses the template string, detects variable tokens or random
-    // sequence and creates a tokens vector out of them
+    // State machine function that parses the template string and tokenizes it into plain text,
+    // variables or random sequences
     pub fn parse_tokens_from_template(
         template: &String,
     ) -> Result<Vec<Token>, TemplateParserError> {
@@ -38,8 +38,7 @@ impl Token {
                 // Updates machine state every char iteration based on char
                 // it meets
                 state = match state {
-                    // Plain means it just iterates over sequence of string value that shouldn't be
-                    // parsed/replaced
+                    // Plain means just raw string from the template that doesn't need to be replaced
                     VariableParserState::Plain => {
                         // If it finds % token then it signalizes that there might be either
                         // variable or random sequnce in front
@@ -187,6 +186,7 @@ impl Token {
                             ))
                         }
                     },
+                    // Keeps reaading a sequence here up until closing character } is met
                     VariableParserState::SeqTokenRead => {
                         match tokens.pop() {
                             Some(mut token) => match ch {
