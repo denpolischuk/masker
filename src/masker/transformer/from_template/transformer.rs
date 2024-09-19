@@ -52,27 +52,68 @@ impl TemplateTransformer {
 
 impl Transformer for TemplateTransformer {
     fn generate(&self, opts: &Options) -> Result<GeneratedValue, TransformerError> {
-        let resolved: Result<Vec<String>, TransformerError> = self
-            .tokens
-            .iter()
-            .map(|token| match &token.0 {
-                TokenKind::Plain(s) => Ok(s.clone()),
-                TokenKind::Variable(v) => match opts.get(v) {
-                    Some(val) => Ok(val.to_string()),
-                    None => {
-                        Err(
-                            TransformerError::new::<Self>(
-                                TransformerErrorKind::FailedToParseTempalteTransformer(TemplateParserError::new(super::error::TemplateParserErrorKind::FailedToResolveValueFromTemplate(self.template.clone(), v.clone())))
-                            )
-                        )
-                    },
-                },
-                TokenKind::CapitalLetterSeq(seq) => Ok(thread_rng().sample_iter(&self.upper_case_letters_set).take(seq.chars().count()).collect::<String>()),
-                TokenKind::LowerCaseLetterSeq(seq) => Ok(thread_rng().sample_iter(&self.lower_case_letters_set).take(seq.chars().count()).collect::<String>()),
-                TokenKind::DigitSeq(seq) => Ok(thread_rng().sample_iter(&self.digits_set).take(seq.chars().count()).collect::<String>()),
-            })
-            .collect();
+        let mut res = String::new();
+        self.tokens.iter().try_for_each(|token| match &token.0 {
+            // Simply add plain text to the result generated value
+            TokenKind::Plain(s) => {
+                res.push_str(s);
+                Ok(())
+            }
+            // Try replacing variable from options map
+            TokenKind::Variable(v) => match opts.get(v) {
+                Some(val) => {
+                    res.push_str(val);
+                    Ok(())
+                }
+                None => Err(TransformerError::new::<Self>(
+                    TransformerErrorKind::FailedToParseTempalteTransformer(
+                        TemplateParserError::new(
+                            super::error::TemplateParserErrorKind::FailedToResolveValueFromTemplate(
+                                self.template.clone(),
+                                v.clone(),
+                            ),
+                        ),
+                    ),
+                )),
+            },
+            // Generate random sequence of capital letter of lenght of the token and add it to
+            // the result val
+            TokenKind::CapitalLetterSeq(seq) => {
+                res.push_str(
+                    thread_rng()
+                        .sample_iter(&self.upper_case_letters_set)
+                        .take(seq.chars().count())
+                        .collect::<String>()
+                        .as_str(),
+                );
+                Ok(())
+            }
+            // Generate random sequence of lowercased letter of lenght of the token and add it to
+            // the result val
+            TokenKind::LowerCaseLetterSeq(seq) => {
+                res.push_str(
+                    thread_rng()
+                        .sample_iter(&self.lower_case_letters_set)
+                        .take(seq.chars().count())
+                        .collect::<String>()
+                        .as_str(),
+                );
+                Ok(())
+            }
+            // Generate random sequence of digits of lenght of the token and add it to
+            // the result val
+            TokenKind::DigitSeq(seq) => {
+                res.push_str(
+                    thread_rng()
+                        .sample_iter(&self.digits_set)
+                        .take(seq.chars().count())
+                        .collect::<String>()
+                        .as_str(),
+                );
+                Ok(())
+            }
+        })?;
 
-        Ok(GeneratedValue::String(resolved?.join("")))
+        Ok(GeneratedValue::String(res))
     }
 }
