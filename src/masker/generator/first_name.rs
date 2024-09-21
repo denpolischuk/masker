@@ -42,6 +42,6 @@ impl Generator for FirstNameGenerator {
         // if value.to_lowercase().trim() == res.to_lowercase().trim() {
         //     return Ok(String::from(RANDOM_NAMES[rand_i + 1]));
         // }
-        Ok(GeneratedValue::String(res.to_string()))
+        Ok(GeneratedValue::String(res.into()))
     }
 }

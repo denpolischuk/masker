@@ -7,6 +7,7 @@ use crate::masker::{
 
 use super::GeneratorError;
 
+#[non_exhaustive]
 pub enum GeneratedValue {
     String(String),
     Number(String),
