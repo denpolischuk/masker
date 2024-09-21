@@ -18,14 +18,12 @@ pub trait Transformer: Sync + Send {
 
 pub type Options<'a> = HashMap<&'a String, &'a String>;
 
-pub fn new_from_yaml(
-    yaml: &serde_yaml::Value,
-) -> Result<Pin<Box<dyn Transformer>>, ConfigParseError> {
+pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Box<dyn Transformer>, ConfigParseError> {
     match yaml["kind"].as_str() {
         Some(s) => match s {
-            "FirstName" => Ok(Box::pin(FirstNameTransformer::new())),
-            "LastName" => Ok(Box::pin(LastNameTransformer::new())),
-            "Template" => Ok(Box::pin(TemplateTransformer::new_from_yaml(yaml)?)),
+            "FirstName" => Ok(Box::new(FirstNameTransformer::new())),
+            "LastName" => Ok(Box::new(LastNameTransformer::new())),
+            "Template" => Ok(Box::new(TemplateTransformer::new_from_yaml(yaml)?)),
             "MobilePhone" => todo!(),
             field => Err(ConfigParseError {
                 field: s.to_string(),

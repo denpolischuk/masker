@@ -9,11 +9,11 @@ use super::{
 
 pub struct Field {
     field_name: String,
-    transformer: Pin<Box<dyn Transformer>>,
+    transformer: Box<dyn Transformer>,
 }
 
 impl Field {
-    pub fn new(field_name: String, transformer: Pin<Box<dyn Transformer>>) -> Self {
+    pub fn new(field_name: String, transformer: Box<dyn Transformer>) -> Self {
         Self {
             field_name,
             transformer,
@@ -35,7 +35,7 @@ impl Field {
                 })
             }
         };
-        let transformer = new_from_yaml(yaml).unwrap();
+        let transformer = new_from_yaml(yaml)?;
         Ok(Self::new(name, transformer))
     }
 

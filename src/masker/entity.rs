@@ -66,13 +66,12 @@ impl Entity {
             }
         };
 
-        let mut s_entries: Vec<Field> = vec::Vec::new();
         let field = "fields";
-        match yaml[field].as_sequence() {
+        let s_entries: Vec<Field> = match yaml[field].as_sequence() {
             Some(seq) => seq
                 .iter()
-                .for_each(|entry| s_entries.push(Field::new_from_yaml(entry).unwrap())), // It's
-            // ok to unwrap here, because we want to panic on corrupted yaml schema
+                .map(|entry| Field::new_from_yaml(entry))
+                .collect::<Result<Vec<Field>, ConfigParseError>>()?,
             None => {
                 return Err(ConfigParseError {
                     kind: ConfigParseErrorKind::MissingField,
