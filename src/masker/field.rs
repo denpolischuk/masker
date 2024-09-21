@@ -1,4 +1,4 @@
-use std::{fmt::Display, pin::Pin};
+use std::fmt::Display;
 
 use crate::masker::transformer::{new_from_yaml, Options, Transformer};
 

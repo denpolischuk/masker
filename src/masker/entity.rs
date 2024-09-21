@@ -1,5 +1,5 @@
 use crate::masker::Field;
-use std::{borrow::Borrow, fmt::Display, vec};
+use std::{borrow::Borrow, fmt::Display};
 
 use super::error::{ConfigParseError, ConfigParseErrorKind};
 
