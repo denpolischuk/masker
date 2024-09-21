@@ -1,8 +1,8 @@
 use rand::Rng;
 
-use crate::masker::transformer::{Options, Transformer};
+use crate::masker::generator::{Generator, Options};
 
-use super::{transformer::GeneratedValue, TransformerError};
+use super::{generator::GeneratedValue, GeneratorError};
 const RANDOM_NAMES: &[&str] = &[
     "Adams",
     "Alvarez",
@@ -108,22 +108,22 @@ const RANDOM_NAMES: &[&str] = &[
 // To not calculate the size of array each time
 const RANDOM_NAMES_SIZE: usize = RANDOM_NAMES.len();
 
-pub struct LastNameTransformer {}
+pub struct LastNameGenerator {}
 
-impl LastNameTransformer {
+impl LastNameGenerator {
     pub fn new() -> Self {
         Self {}
     }
 }
 
-impl Default for LastNameTransformer {
+impl Default for LastNameGenerator {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Transformer for LastNameTransformer {
-    fn generate(&self, _: &Options) -> Result<GeneratedValue, TransformerError> {
+impl Generator for LastNameGenerator {
+    fn generate(&self, _: &Options) -> Result<GeneratedValue, GeneratorError> {
         let rand_i = rand::thread_rng().gen_range(0..RANDOM_NAMES_SIZE - 1);
         let res = RANDOM_NAMES[rand_i];
 

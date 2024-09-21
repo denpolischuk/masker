@@ -1,4 +1,4 @@
-use super::error::{TemplateParserError, TemplateParserErrorKind};
+use super::error::{TemplateParserErrorKind, TemplatedParserError};
 
 #[derive(Debug, PartialEq)]
 pub enum TokenKind {
@@ -28,20 +28,20 @@ impl Token {
     // variables or random sequences
     pub fn parse_tokens_from_template(
         template: &String,
-    ) -> Result<Vec<Token>, TemplateParserError> {
+    ) -> Result<Vec<Token>, TemplatedParserError> {
         let mut state = VariableParserState::Plain;
         let mut tokens: Vec<Token> = vec![];
 
-        let map_res: Result<Vec<()>, TemplateParserError> = template
+        let map_res: Result<Vec<()>, TemplatedParserError> = template
             .char_indices()
-            .map(|(ind, ch)| -> Result<(), TemplateParserError> {
+            .map(|(ind, ch)| -> Result<(), TemplatedParserError> {
                 // Updates machine state every char iteration based on char
                 // it meets
                 state = match state {
                     // Plain means just raw string from the template that doesn't need to be replaced
                     VariableParserState::Plain => {
                         // If it finds % token then it signalizes that there might be either
-                        // variable or random sequnce in front
+                        // variable or random sequence in front
                         if ch == '%' {
                             tokens.push(Token(TokenKind::Variable(String::new())));
                             VariableParserState::TokenEntry
@@ -82,7 +82,7 @@ impl Token {
                             let mut token = match tokens.pop() {
                                 Some(t) => t,
                                 None => {
-                                    return Err(TemplateParserError::new(
+                                    return Err(TemplatedParserError::new(
                                         TemplateParserErrorKind::FailedToParseTemplate(
                                             template.clone(),
                                             ind,
@@ -117,7 +117,7 @@ impl Token {
                                         VariableParserState::Plain
                                     // Everything else should cause an error
                                     } else {
-                                        return Err(TemplateParserError::new(
+                                        return Err(TemplatedParserError::new(
                                             TemplateParserErrorKind::UnexpectedToken(
                                                 template.clone(),
                                                 ind,
@@ -127,7 +127,7 @@ impl Token {
                                     }
                                 }
                                 _ => {
-                                    return Err(TemplateParserError::new(
+                                    return Err(TemplatedParserError::new(
                                         TemplateParserErrorKind::FailedToParseTemplate(
                                             template.clone(),
                                             ind,
@@ -136,7 +136,7 @@ impl Token {
                                 }
                             },
                             None => {
-                                return Err(TemplateParserError::new(
+                                return Err(TemplatedParserError::new(
                                     TemplateParserErrorKind::FailedToParseTemplate(
                                         template.clone(),
                                         ind,
@@ -168,7 +168,7 @@ impl Token {
                             }
                             // Everything else is unrecognized and thus should throw an error
                             _ => {
-                                return Err(TemplateParserError::new(
+                                return Err(TemplatedParserError::new(
                                     TemplateParserErrorKind::UnrecognizedSequenceSymbol(
                                         template.clone(),
                                         ind,
@@ -178,7 +178,7 @@ impl Token {
                             }
                         },
                         None => {
-                            return Err(TemplateParserError::new(
+                            return Err(TemplatedParserError::new(
                                 TemplateParserErrorKind::FailedToParseTemplate(
                                     template.clone(),
                                     ind,
@@ -247,7 +247,7 @@ impl Token {
                                     VariableParserState::Plain
                                 }
                                 _ => {
-                                    return Err(TemplateParserError::new(
+                                    return Err(TemplatedParserError::new(
                                         TemplateParserErrorKind::UnrecognizedSequenceSymbol(
                                             template.clone(),
                                             ind,
@@ -257,7 +257,7 @@ impl Token {
                                 }
                             },
                             None => {
-                                return Err(TemplateParserError::new(
+                                return Err(TemplatedParserError::new(
                                     TemplateParserErrorKind::FailedToParseTemplate(
                                         template.clone(),
                                         ind,
@@ -275,11 +275,11 @@ impl Token {
 
         // State machine should always endup in Plain state.
         // If state is something else, then it means that template is incorrect.
-        // Specifically this match covers sitautions like this template "Company #%{dd} %{Llll",
+        // Specifically this match covers situations like this template "Company #%{dd} %{Llll",
         // where last sequence is not ended with closing character }
         match state {
             VariableParserState::Plain => Ok(tokens),
-            _ => Err(TemplateParserError::new(
+            _ => Err(TemplatedParserError::new(
                 TemplateParserErrorKind::FailedToParseTemplate(template.to_string(), 0),
             )),
         }
@@ -288,8 +288,8 @@ impl Token {
 
 #[cfg(test)]
 mod tests {
-    use crate::masker::transformer::from_template::error::{
-        TemplateParserError, TemplateParserErrorKind,
+    use crate::masker::generator::from_template::error::{
+        TemplateParserErrorKind, TemplatedParserError,
     };
 
     use super::{Token, TokenKind};
@@ -370,7 +370,7 @@ mod tests {
         let r = Token::parse_tokens_from_template(&tpl).unwrap_err();
         assert_eq!(
             r,
-            TemplateParserError::new(TemplateParserErrorKind::UnrecognizedSequenceSymbol(
+            TemplatedParserError::new(TemplateParserErrorKind::UnrecognizedSequenceSymbol(
                 tpl, 7, 'x'
             ))
         );

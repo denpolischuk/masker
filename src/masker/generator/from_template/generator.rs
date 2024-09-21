@@ -2,16 +2,14 @@ use rand::{distributions::Uniform, thread_rng, Rng};
 
 use super::{
     token::{Token, TokenKind},
-    TemplateParserError,
+    TemplatedParserError,
 };
 use crate::masker::{
     error::{ConfigParseError, ConfigParseErrorKind},
-    transformer::{
-        error::TransformerErrorKind, GeneratedValue, Options, Transformer, TransformerError,
-    },
+    generator::{error::GeneratorErrorKind, GeneratedValue, Generator, GeneratorError, Options},
 };
 
-pub struct TemplateTransformer {
+pub struct TemplatedGenerator {
     upper_case_letters_set: Uniform<char>,
     lower_case_letters_set: Uniform<char>,
     digits_set: Uniform<char>,
@@ -19,7 +17,7 @@ pub struct TemplateTransformer {
     tokens: Vec<Token>,
 }
 
-impl TemplateTransformer {
+impl TemplatedGenerator {
     pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Self, ConfigParseError> {
         let field = "template";
         match yaml[field].as_str() {
@@ -27,9 +25,9 @@ impl TemplateTransformer {
                 let tokens = Token::parse_tokens_from_template(&t.to_string()).map_err(|e| {
                     ConfigParseError {
                         field: field.to_string(),
-                        kind: ConfigParseErrorKind::FailedToCreateTransformerFromConfig(
-                            TransformerError::new::<Self>(
-                                TransformerErrorKind::FailedToParseTempalteTransformer(e),
+                        kind: ConfigParseErrorKind::FailedToCreateGeneratorFromConfig(
+                            GeneratorError::new::<Self>(
+                                GeneratorErrorKind::FailedToParseTemplatedGenerator(e),
                             ),
                         ),
                     }
@@ -50,8 +48,8 @@ impl TemplateTransformer {
     }
 }
 
-impl Transformer for TemplateTransformer {
-    fn generate(&self, opts: &Options) -> Result<GeneratedValue, TransformerError> {
+impl Generator for TemplatedGenerator {
+    fn generate(&self, opts: &Options) -> Result<GeneratedValue, GeneratorError> {
         let mut res = String::new();
         self.tokens.iter().try_for_each(|token| match &token.0 {
             // Simply add plain text to the result generated value
@@ -65,18 +63,16 @@ impl Transformer for TemplateTransformer {
                     res.push_str(val);
                     Ok(())
                 }
-                None => Err(TransformerError::new::<Self>(
-                    TransformerErrorKind::FailedToParseTempalteTransformer(
-                        TemplateParserError::new(
-                            super::error::TemplateParserErrorKind::FailedToResolveValueFromTemplate(
-                                self.template.clone(),
-                                v.clone(),
-                            ),
+                None => Err(GeneratorError::new::<Self>(
+                    GeneratorErrorKind::FailedToParseTemplatedGenerator(TemplatedParserError::new(
+                        super::error::TemplateParserErrorKind::FailedToResolveValueFromTemplate(
+                            self.template.clone(),
+                            v.clone(),
                         ),
-                    ),
+                    )),
                 )),
             },
-            // Generate random sequence of capital letter of lenght of the token and add it to
+            // Generate random sequence of capital letter of length of the token and add it to
             // the result val
             TokenKind::CapitalLetterSeq(seq) => {
                 res.push_str(
@@ -88,7 +84,7 @@ impl Transformer for TemplateTransformer {
                 );
                 Ok(())
             }
-            // Generate random sequence of lowercased letter of lenght of the token and add it to
+            // Generate random sequence of lowercased letter of length of the token and add it to
             // the result val
             TokenKind::LowerCaseLetterSeq(seq) => {
                 res.push_str(
@@ -100,7 +96,7 @@ impl Transformer for TemplateTransformer {
                 );
                 Ok(())
             }
-            // Generate random sequence of digits of lenght of the token and add it to
+            // Generate random sequence of digits of length of the token and add it to
             // the result val
             TokenKind::DigitSeq(seq) => {
                 res.push_str(

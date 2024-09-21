@@ -1,6 +1,6 @@
 use std::{env::VarError, error::Error, fmt::Display};
 
-use super::transformer::TransformerError;
+use super::generator::GeneratorError;
 
 #[derive(Debug, PartialEq)]
 #[non_exhaustive]
@@ -35,8 +35,8 @@ impl Display for ConfigParseError {
                     self.field
                 )
             }
-            ConfigParseErrorKind::FailedToCreateTransformerFromConfig(_) => {
-                write!(f, "couldn't parse transformer for field {}", self.field)
+            ConfigParseErrorKind::FailedToCreateGeneratorFromConfig(_) => {
+                write!(f, "couldn't parse generator for field {}", self.field)
             }
         }
     }
@@ -46,7 +46,7 @@ impl Error for ConfigParseError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match &self.kind {
             ConfigParseErrorKind::FailedToReadValueFromEnv(_, e) => e.source(),
-            ConfigParseErrorKind::FailedToCreateTransformerFromConfig(e) => e.source(),
+            ConfigParseErrorKind::FailedToCreateGeneratorFromConfig(e) => e.source(),
             _ => None,
         }
     }
@@ -60,5 +60,5 @@ pub enum ConfigParseErrorKind {
     UnknownField(String),
     UnexpectedFieldType,
     FailedToReadValueFromEnv(String, VarError),
-    FailedToCreateTransformerFromConfig(TransformerError),
+    FailedToCreateGeneratorFromConfig(GeneratorError),
 }

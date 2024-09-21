@@ -1,27 +1,27 @@
 use std::fmt::Display;
 
-use crate::masker::transformer::{new_from_yaml, Options, Transformer};
+use crate::masker::generator::{new_from_yaml, Generator, Options};
 
 use super::{
     error::{ConfigParseError, ConfigParseErrorKind},
-    transformer::{GeneratedValue, TransformerError},
+    generator::{GeneratedValue, GeneratorError},
 };
 
 pub struct Field {
     field_name: String,
-    transformer: Box<dyn Transformer>,
+    generator: Box<dyn Generator>,
 }
 
 impl Field {
-    pub fn new(field_name: String, transformer: Box<dyn Transformer>) -> Self {
+    pub fn new(field_name: String, generator: Box<dyn Generator>) -> Self {
         Self {
             field_name,
-            transformer,
+            generator,
         }
     }
 
-    pub fn generate(&self, opts: &Options) -> Result<GeneratedValue, TransformerError> {
-        self.transformer.generate(opts)
+    pub fn generate(&self, opts: &Options) -> Result<GeneratedValue, GeneratorError> {
+        self.generator.generate(opts)
     }
 
     pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Self, ConfigParseError> {
@@ -35,8 +35,8 @@ impl Field {
                 })
             }
         };
-        let transformer = new_from_yaml(yaml)?;
-        Ok(Self::new(name, transformer))
+        let generator = new_from_yaml(yaml)?;
+        Ok(Self::new(name, generator))
     }
 
     pub fn get_column_name(&self) -> &String {

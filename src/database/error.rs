@@ -1,12 +1,12 @@
 use std::fmt::Display;
 
-use crate::masker::transformer::TransformerError;
+use crate::masker::generator::GeneratorError;
 
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum DatabaseAdapterErrorKind {
     NoEntriesSpecifiedForEntity(String),
-    FailedToMask(String, TransformerError),
+    FailedToMask(String, GeneratorError),
     QueryFailed(sqlx::Error),
     DatabaseConnectionError(sqlx::Error),
     InconsistentSchema(String),
@@ -57,9 +57,9 @@ impl DatabaseAdapterError {
             kind: DatabaseAdapterErrorKind::QueryFailed(error),
         }
     }
-    pub fn failed_to_mask(entry_name: String, transformer_error: TransformerError) -> Self {
+    pub fn failed_to_mask(entry_name: String, generator_error: GeneratorError) -> Self {
         Self {
-            kind: DatabaseAdapterErrorKind::FailedToMask(entry_name, transformer_error),
+            kind: DatabaseAdapterErrorKind::FailedToMask(entry_name, generator_error),
         }
     }
     pub fn inconsistent_schema(missing_entity: String) -> Self {
