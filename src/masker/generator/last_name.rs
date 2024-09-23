@@ -127,11 +127,6 @@ impl Generator for LastNameGenerator {
         let rand_i = rand::thread_rng().gen_range(0..RANDOM_NAMES_SIZE - 1);
         let res = RANDOM_NAMES[rand_i];
 
-        // // If it happens that random name is the same as randomly picked one, then use the next
-        // // name in the list
-        // if value.to_lowercase().trim() == res.to_lowercase().trim() {
-        //     return Ok(String::from(RANDOM_NAMES[rand_i + 1]));
-        // }
         Ok(GeneratedValue::String(res.into()))
     }
 }
