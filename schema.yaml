@@ -17,6 +17,12 @@ schemas:
         kind: FirstName
       - name: last_name
         kind: LastName
+      - name: iban
+        kind: Iban
+        formatted: false
+        country_codes:
+          - DE
+          - FR
       # - name: customerName
       #   kind: Template
       #   template: "Company nr {id}"
