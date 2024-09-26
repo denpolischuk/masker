@@ -25,6 +25,9 @@ impl Display for GeneratorError {
             GeneratorErrorKind::GenerateIbanForCountryCode(code) => {
                 write!(f, "couldn't generate iban for country code {}", code)
             }
+            GeneratorErrorKind::UnexpectedCountryCodeForIban(code) => {
+                write!(f, "unexpected country code for iban - {}", code)
+            }
         }
     }
 }
@@ -53,4 +56,5 @@ pub enum GeneratorErrorKind {
     ParseTemplatedGenerator(TemplatedParserError),
     GenerateIban,
     GenerateIbanForCountryCode(String),
+    UnexpectedCountryCodeForIban(String),
 }
