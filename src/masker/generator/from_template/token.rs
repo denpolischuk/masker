@@ -16,10 +16,10 @@ pub struct Token(pub TokenKind);
 // Each enum tumple contains a PREVIOUS ITERATION char and char index of the string
 enum VariableParserState {
     Plain,         // just string reading
-    TokenEntry,    // '#' char detected
-    VarBlockStart, // if '(' follows after '#'
+    TokenEntry,    // '%' char detected
+    VarBlockStart, // if '(' follows after '%'
     VarTokenRead,  // whatever comes after #( and is alphanumerical or underscore
-    SeqBlockStart, // if '{' follows after '#'
+    SeqBlockStart, // if '{' follows after '%'
     SeqTokenRead,  // whatever comes after #( and is part of known rand sequence charset
 }
 
