@@ -5,7 +5,13 @@ use crate::masker::{
     generator::{FirstNameGenerator, LastNameGenerator, TemplatedGenerator},
 };
 
-use super::{GeneratorError, IbanGenerator};
+use super::{
+    address::{
+        CityNameGenerator, CountryCodeGenerator, CountryNameGenerator, PostCodeGenerator,
+        StateNameGenerator, StreetNameGenerator,
+    },
+    GeneratorError, IbanGenerator,
+};
 
 #[non_exhaustive]
 pub enum GeneratedValue {
@@ -17,7 +23,7 @@ pub trait Generator: Sync + Send {
     fn generate(&self, options: &Options) -> Result<GeneratedValue, GeneratorError>;
 }
 
-pub type Options<'a> = HashMap<&'a String, &'a String>;
+pub type Options<'a> = HashMap<&'a String, GeneratedValue>;
 
 pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Box<dyn Generator>, ConfigParseError> {
     match yaml["kind"].as_str() {
@@ -26,6 +32,12 @@ pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Box<dyn Generator>, Con
             "LastName" => Ok(Box::new(LastNameGenerator::new())),
             "Template" => Ok(Box::new(TemplatedGenerator::new_from_yaml(yaml)?)),
             "Iban" => Ok(Box::new(IbanGenerator::new_from_yaml(yaml)?)),
+            "CityName" => Ok(Box::new(CityNameGenerator::new())),
+            "CountryCode" => Ok(Box::new(CountryCodeGenerator::new())),
+            "CountryName" => Ok(Box::new(CountryNameGenerator::new())),
+            "PostCode" => Ok(Box::new(PostCodeGenerator::new())),
+            "StateName" => Ok(Box::new(StateNameGenerator::new())),
+            "StreetName" => Ok(Box::new(StreetNameGenerator::new())),
             field => Err(ConfigParseError {
                 field: s.to_string(),
                 kind: ConfigParseErrorKind::UnknownField(String::from(field)),

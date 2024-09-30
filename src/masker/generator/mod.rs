@@ -1,3 +1,4 @@
+mod address;
 mod error;
 mod first_name;
 mod from_template;

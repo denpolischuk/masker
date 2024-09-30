@@ -60,7 +60,10 @@ impl Generator for TemplatedGenerator {
             // Try replacing variable from options map
             TokenKind::Variable(v) => match opts.get(v) {
                 Some(val) => {
-                    res.push_str(val);
+                    res.push_str(match val {
+                        GeneratedValue::String(s) => s,
+                        GeneratedValue::Number(n) => n,
+                    });
                     Ok(())
                 }
                 None => Err(GeneratorError::new::<Self>(

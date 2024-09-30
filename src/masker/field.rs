@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{cmp::Ordering, fmt::Display};
 
 use crate::masker::generator::{new_from_yaml, Generator, Options};
 
@@ -9,13 +9,15 @@ use super::{
 
 pub struct Field {
     field_name: String,
+    pub kind: String,
     generator: Box<dyn Generator>,
 }
 
 impl Field {
-    pub fn new(field_name: String, generator: Box<dyn Generator>) -> Self {
+    pub fn new(field_name: String, kind: String, generator: Box<dyn Generator>) -> Self {
         Self {
             field_name,
+            kind,
             generator,
         }
     }
@@ -35,12 +37,59 @@ impl Field {
                 })
             }
         };
+        let field_name = String::from("kind");
+        let kind = match yaml[field_name.as_str()].as_str() {
+            Some(s) => String::from(s),
+            None => {
+                return Err(ConfigParseError {
+                    kind: ConfigParseErrorKind::MissingField,
+                    field: field_name,
+                })
+            }
+        };
+
         let generator = new_from_yaml(yaml)?;
-        Ok(Self::new(name, generator))
+        Ok(Self::new(name, kind, generator))
     }
 
     pub fn get_column_name(&self) -> &String {
         &self.field_name
+    }
+
+    // This function is needed for comparing the fields in terms of simple and composed
+    // generators.
+    fn has_composed_generator_kind(&self) -> bool {
+        matches!(self.kind.as_str(), "Template")
+    }
+}
+
+impl Eq for Field {}
+
+impl PartialEq for Field {
+    fn eq(&self, other: &Self) -> bool {
+        self.field_name == other.field_name && self.kind == other.kind
+    }
+}
+
+impl PartialOrd for Field {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Field {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let is_complex_gen_self = self.has_composed_generator_kind();
+        let is_complex_gen_other = other.has_composed_generator_kind();
+        match is_complex_gen_self.cmp(&is_complex_gen_other) {
+            core::cmp::Ordering::Equal => {}
+            ord => return ord,
+        }
+        match self.field_name.cmp(&other.field_name) {
+            core::cmp::Ordering::Equal => {}
+            ord => return ord,
+        }
+        Ordering::Equal
     }
 }
 
