@@ -27,7 +27,7 @@ impl TemplatedGenerator {
                         field: field.to_string(),
                         kind: ConfigParseErrorKind::FailedToCreateGeneratorFromConfig(
                             GeneratorError::new::<Self>(
-                                GeneratorErrorKind::FailedToParseTemplatedGenerator(e),
+                                GeneratorErrorKind::ParseTemplatedGenerator(e),
                             ),
                         ),
                     }
@@ -64,7 +64,7 @@ impl Generator for TemplatedGenerator {
                     Ok(())
                 }
                 None => Err(GeneratorError::new::<Self>(
-                    GeneratorErrorKind::FailedToParseTemplatedGenerator(TemplatedParserError::new(
+                    GeneratorErrorKind::ParseTemplatedGenerator(TemplatedParserError::new(
                         super::error::TemplateParserErrorKind::FailedToResolveValueFromTemplate(
                             self.template.clone(),
                             v.clone(),

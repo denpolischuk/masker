@@ -70,7 +70,7 @@ impl Entity {
         let s_entries: Vec<Field> = match yaml[field].as_sequence() {
             Some(seq) => seq
                 .iter()
-                .map(|entry| Field::new_from_yaml(entry))
+                .map(Field::new_from_yaml)
                 .collect::<Result<Vec<Field>, ConfigParseError>>()?,
             None => {
                 return Err(ConfigParseError {

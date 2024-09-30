@@ -7,6 +7,7 @@ edition = "2021"
 async-trait = "0.1.82"
 fake = "2.9.2"
 futures = "0.3.30"
+iban = { git = "https://github.com/denpolischuk/iban.git", features = ["rand"] }
 rand = "0.8.5"
 regex = "1.10.6"
 serde_yaml = "0.9.34"

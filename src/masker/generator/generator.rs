@@ -5,7 +5,7 @@ use crate::masker::{
     generator::{FirstNameGenerator, LastNameGenerator, TemplatedGenerator},
 };
 
-use super::GeneratorError;
+use super::{GeneratorError, IbanGenerator};
 
 #[non_exhaustive]
 pub enum GeneratedValue {
@@ -25,7 +25,7 @@ pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Box<dyn Generator>, Con
             "FirstName" => Ok(Box::new(FirstNameGenerator::new())),
             "LastName" => Ok(Box::new(LastNameGenerator::new())),
             "Template" => Ok(Box::new(TemplatedGenerator::new_from_yaml(yaml)?)),
-            "MobilePhone" => todo!(),
+            "Iban" => Ok(Box::new(IbanGenerator::new_from_yaml(yaml)?)),
             field => Err(ConfigParseError {
                 field: s.to_string(),
                 kind: ConfigParseErrorKind::UnknownField(String::from(field)),
