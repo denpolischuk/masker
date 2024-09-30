@@ -65,6 +65,7 @@ CREATE TABLE employees (
   officeCode varchar(10) NOT NULL,
   reportsTo int DEFAULT NULL,
   jobTitle varchar(50) NOT NULL,
+  iban varchar(35),
   PRIMARY KEY (employeeNumber),
   FOREIGN KEY (reportsTo) REFERENCES employees (employeeNumber),
   FOREIGN KEY (officeCode) REFERENCES offices (officeCode)
