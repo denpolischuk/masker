@@ -81,7 +81,7 @@ impl Field {
     // This function is needed for comparing the fields in terms of simple and composed
     // generators.
     fn has_composed_generator_kind(&self) -> bool {
-        matches!(self.kind, FieldKind::Iban | FieldKind::Template)
+        matches!(self.kind, FieldKind::Template)
     }
 }
 
