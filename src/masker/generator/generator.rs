@@ -8,7 +8,7 @@ use crate::masker::{
     FieldKind,
 };
 
-use super::{first_name, last_name, GeneratorError, IbanGenerator, SimpleGenerator};
+use super::{GeneratorError, IbanGenerator, SimpleGenerator};
 
 #[non_exhaustive]
 pub enum GeneratedValue {
@@ -35,48 +35,49 @@ pub fn new_from_yaml(
     yaml: &serde_yaml::Value,
 ) -> Result<(FieldKind, Box<dyn Generator>), ConfigParseError> {
     use fake::faker::address::raw::*;
+    use fake::faker::name::raw::*;
     match yaml["kind"].as_str() {
         Some(s) => match FieldKind::from_str(s).unwrap() {
             FieldKind::FirstName => Ok((
                 FieldKind::FirstName,
                 Box::new(SimpleGenerator::new(|_: &Options| {
-                    Ok(GeneratedValue::String(first_name::generate().to_string()))
+                    Ok(GeneratedValue::String(FirstName(EN).fake()))
                 })),
             )),
             FieldKind::LastName => Ok((
                 FieldKind::LastName,
                 Box::new(SimpleGenerator::new(|_: &Options| {
-                    Ok(GeneratedValue::String(last_name::generate().to_string()))
+                    Ok(GeneratedValue::String(LastName(EN).fake()))
                 })),
             )),
             FieldKind::CityName => Ok((
                 FieldKind::CityName,
                 Box::new(SimpleGenerator::new(|_: &Options| {
-                    Ok(GeneratedValue::String(CityName(EN).fake::<String>()))
+                    Ok(GeneratedValue::String(CityName(EN).fake()))
                 })),
             )),
             FieldKind::CountryCode => Ok((
                 FieldKind::CountryCode,
                 Box::new(SimpleGenerator::new(|_: &Options| {
-                    Ok(GeneratedValue::String(CountryCode(EN).fake::<String>()))
+                    Ok(GeneratedValue::String(CountryCode(EN).fake()))
                 })),
             )),
             FieldKind::CountryName => Ok((
                 FieldKind::CountryName,
                 Box::new(SimpleGenerator::new(|_: &Options| {
-                    Ok(GeneratedValue::String(CountryName(EN).fake::<String>()))
+                    Ok(GeneratedValue::String(CountryName(EN).fake()))
                 })),
             )),
             FieldKind::PostCode => Ok((
                 FieldKind::PostCode,
                 Box::new(SimpleGenerator::new(|_: &Options| {
-                    Ok(GeneratedValue::String(PostCode(EN).fake::<String>()))
+                    Ok(GeneratedValue::String(PostCode(EN).fake()))
                 })),
             )),
             FieldKind::StateName => Ok((
                 FieldKind::StateName,
                 Box::new(SimpleGenerator::new(|_: &Options| {
-                    Ok(GeneratedValue::String(StateName(EN).fake::<String>()))
+                    Ok(GeneratedValue::String(StateName(EN).fake()))
                 })),
             )),
             FieldKind::Template => Ok((

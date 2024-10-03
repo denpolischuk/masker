@@ -56,6 +56,7 @@ impl Generator for TemplatedGenerator {
     fn generate(&self, opts: &Options) -> Result<GeneratedValue, GeneratorError> {
         let mut res = String::new();
         use fake::faker::address::raw::*;
+        use fake::faker::name::raw::*;
         self.tokens.iter().try_for_each(|token| match &token.0 {
             // Simply add plain text to the result generated value
             TokenKind::Plain(s) => {
@@ -76,8 +77,8 @@ impl Generator for TemplatedGenerator {
                         FieldKind::CityName => res.push_str(CityName(EN).fake::<String>().as_str()),
                         FieldKind::CountryCode => res.push_str(CountryCode(EN).fake::<String>().as_str()),
                         FieldKind::CountryName => res.push_str(CountryName(EN).fake::<String>().as_str()),
-                        FieldKind::FirstName => res.push_str(crate::masker::generator::first_name_generate()),
-                        FieldKind::LastName => res.push_str(crate::masker::generator::last_name_generate()),
+                        FieldKind::FirstName => res.push_str(FirstName(EN).fake()),
+                        FieldKind::LastName => res.push_str(FirstName(EN).fake()),
                         FieldKind::PostCode => res.push_str(PostCode(EN).fake::<String>().as_str()),
                         FieldKind::StateName => res.push_str(StateName(EN).fake::<String>().as_str()),
                         FieldKind::Unknown(_) | FieldKind::Iban | FieldKind::Template => return Err(GeneratorError::new::<Self>(

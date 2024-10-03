@@ -194,8 +194,9 @@ impl DatabaseAdapter for MySQLAdapter {
 
 #[cfg(test)]
 mod tests {
+    use fake::{faker::name::raw::*, locales::EN, Fake};
     use masker::{
-        generator::{first_name_generate, Options, SimpleGenerator},
+        generator::{Options, SimpleGenerator},
         FieldKind,
     };
 
@@ -204,7 +205,7 @@ mod tests {
 
     fn get_generator() -> Box<SimpleGenerator> {
         Box::new(SimpleGenerator::new(|_: &Options| {
-            Ok(GeneratedValue::String(first_name_generate().to_string()))
+            Ok(GeneratedValue::String(FirstName(EN).fake::<String>()))
         }))
     }
 
