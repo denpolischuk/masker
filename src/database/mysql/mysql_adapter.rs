@@ -63,27 +63,27 @@ impl MySQLAdapter {
         }
         let pk_name = masker_entity.get_pk_name();
         let id = id.to_string();
-        let mut opts = HashMap::from([(pk_name, GeneratedValue::String(id.clone()))]);
+        let id_kv = match masker_entity.get_pk_type() {
+            PkType::Int => (pk_name, GeneratedValue::Number(id.clone())),
+            PkType::String => (pk_name, GeneratedValue::String(id.clone())),
+        };
+        let mut opts = HashMap::from([id_kv]);
         for entry in entity_fields {
             let val = entry.generate(&opts).map_err(|e| {
                 DatabaseAdapterError::failed_to_mask(String::from(entry.get_column_name()), e)
             })?;
             opts.insert(entry.get_column_name(), val);
         }
-        let cond = match masker_entity.get_pk_type() {
-            PkType::Int => format!("{} = {}", pk_name, id),
-            PkType::String => {
-                format!("{} = '{}'", pk_name, id)
-            }
-        };
+
+        let id_kv = opts.remove_entry(pk_name).unwrap(); // It's important to remove id from the
+                                                         // opts map before parsing it into query
+        let cond = format!("{} = {}", id_kv.0, id_kv.1);
+
         Ok(format!(
             "UPDATE {} SET {} WHERE {}",
             masker_entity.get_table_name(),
             opts.iter()
-                .map(|(k, val)| match val {
-                    GeneratedValue::String(v) => format!("{} = '{}'", k, v),
-                    GeneratedValue::Number(v) => format!("{} = {}", k, v),
-                })
+                .map(|(k, val)| format!("{} = {}", k, val))
                 .collect::<Vec<String>>()
                 .join(", "),
             cond
@@ -194,9 +194,19 @@ impl DatabaseAdapter for MySQLAdapter {
 
 #[cfg(test)]
 mod tests {
-    use crate::masker::{generator::FirstNameGenerator, Entity, Field};
+    use masker::{
+        generator::{first_name_generate, Options, SimpleGenerator},
+        FieldKind,
+    };
 
     use super::*;
+    use crate::masker::{Entity, Field};
+
+    fn get_generator() -> Box<SimpleGenerator> {
+        Box::new(SimpleGenerator::new(|_: &Options| {
+            Ok(GeneratedValue::String(first_name_generate().to_string()))
+        }))
+    }
 
     async fn get_test_conn() -> sqlx::Pool<sqlx::MySql> {
         sqlx::mysql::MySqlPoolOptions::new()
@@ -224,15 +234,11 @@ mod tests {
         let t_name = "table";
         let pk_name = "id";
         let fields: Vec<Field> = vec![
-            Field::new(
-                "name".to_string(),
-                "FirstName".to_string(),
-                Box::new(FirstNameGenerator {}),
-            ),
+            Field::new("name".to_string(), FieldKind::FirstName, get_generator()),
             Field::new(
                 "last_name".to_string(),
-                "LastName".to_string(),
-                Box::new(FirstNameGenerator {}),
+                FieldKind::LastName,
+                get_generator(),
             ),
         ];
         let entity = Entity::new(t_name.to_string(), pk_name.to_string(), PkType::Int, fields);
@@ -251,15 +257,11 @@ mod tests {
         let t_name = "table";
         let pk_name = "id";
         let fields: Vec<Field> = vec![
-            Field::new(
-                "name".to_string(),
-                "FirstName".to_string(),
-                Box::new(FirstNameGenerator {}),
-            ),
+            Field::new("name".to_string(), FieldKind::FirstName, get_generator()),
             Field::new(
                 "last_name".to_string(),
-                "LastName".to_string(),
-                Box::new(FirstNameGenerator {}),
+                FieldKind::LastName,
+                get_generator(),
             ),
         ];
         let entity = Entity::new(
@@ -301,8 +303,8 @@ mod tests {
         let field_name = "contactFirstName";
         let fields: Vec<Field> = vec![Field::new(
             field_name.to_string(),
-            "FirstName".to_string(),
-            Box::new(FirstNameGenerator {}),
+            FieldKind::FirstName,
+            get_generator(),
         )];
         let entity = Entity::new(t_name.to_string(), pk_name.to_string(), PkType::Int, fields);
         let pool = get_test_conn().await;

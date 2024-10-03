@@ -1,8 +1,5 @@
 use rand::Rng;
 
-use crate::masker::generator::{Generator, Options};
-
-use super::{generator::GeneratedValue, GeneratorError};
 const RANDOM_NAMES: &[&str] = &[
     "Alice", "Bob", "Charlie", "Diana", "Ethan", "Fiona", "George", "Hannah", "Isaac", "Jasmine",
     "Kevin", "Lena", "Mason", "Nina", "Oscar", "Piper", "Quinn", "Ruby", "Sam", "Tina", "Ulysses",
@@ -18,25 +15,7 @@ const RANDOM_NAMES: &[&str] = &[
 // To not calculate the size of array each time
 const RANDOM_NAMES_SIZE: usize = RANDOM_NAMES.len();
 
-pub struct FirstNameGenerator {}
-
-impl FirstNameGenerator {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl Default for FirstNameGenerator {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Generator for FirstNameGenerator {
-    fn generate(&self, _: &Options) -> Result<GeneratedValue, GeneratorError> {
-        let rand_i = rand::thread_rng().gen_range(0..RANDOM_NAMES_SIZE - 1);
-        let res = RANDOM_NAMES[rand_i];
-
-        Ok(GeneratedValue::String(res.into()))
-    }
+pub fn generate() -> &'static str {
+    let rand_i = rand::thread_rng().gen_range(0..RANDOM_NAMES_SIZE - 1);
+    RANDOM_NAMES[rand_i]
 }

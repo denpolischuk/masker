@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, fmt::Display};
+use std::{cmp::Ordering, fmt::Display, str::FromStr};
 
 use crate::masker::generator::{new_from_yaml, Generator, Options};
 
@@ -7,14 +7,47 @@ use super::{
     generator::{GeneratedValue, GeneratorError},
 };
 
+#[derive(PartialEq, Eq, Clone)]
+pub enum FieldKind {
+    FirstName,
+    LastName,
+    CityName,
+    CountryCode,
+    CountryName,
+    PostCode,
+    StateName,
+    Template,
+    Iban,
+    Unknown(String),
+}
+
+impl FromStr for FieldKind {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "FirstName" => Ok(Self::FirstName),
+            "LastName" => Ok(Self::LastName),
+            "CityName" => Ok(Self::CityName),
+            "CountryCode" => Ok(Self::CountryCode),
+            "CountryName" => Ok(Self::CountryName),
+            "PostCode" => Ok(Self::PostCode),
+            "StateName" => Ok(Self::StateName),
+            "Template" => Ok(Self::Template),
+            "Iban" => Ok(Self::Iban),
+            _ => Ok(Self::Unknown(s.to_string())),
+        }
+    }
+}
+
 pub struct Field {
     field_name: String,
-    pub kind: String,
+    pub kind: FieldKind,
     generator: Box<dyn Generator>,
 }
 
 impl Field {
-    pub fn new(field_name: String, kind: String, generator: Box<dyn Generator>) -> Self {
+    pub fn new(field_name: String, kind: FieldKind, generator: Box<dyn Generator>) -> Self {
         Self {
             field_name,
             kind,
@@ -37,18 +70,7 @@ impl Field {
                 })
             }
         };
-        let field_name = String::from("kind");
-        let kind = match yaml[field_name.as_str()].as_str() {
-            Some(s) => String::from(s),
-            None => {
-                return Err(ConfigParseError {
-                    kind: ConfigParseErrorKind::MissingField,
-                    field: field_name,
-                })
-            }
-        };
-
-        let generator = new_from_yaml(yaml)?;
+        let (kind, generator) = new_from_yaml(yaml)?;
         Ok(Self::new(name, kind, generator))
     }
 
@@ -59,7 +81,7 @@ impl Field {
     // This function is needed for comparing the fields in terms of simple and composed
     // generators.
     fn has_composed_generator_kind(&self) -> bool {
-        matches!(self.kind.as_str(), "Template")
+        matches!(self.kind, FieldKind::Iban | FieldKind::Template)
     }
 }
 
