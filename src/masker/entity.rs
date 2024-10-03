@@ -67,7 +67,7 @@ impl Entity {
         };
 
         let field = "fields";
-        let s_entries: Vec<Field> = match yaml[field].as_sequence() {
+        let mut s_fields: Vec<Field> = match yaml[field].as_sequence() {
             Some(seq) => seq
                 .iter()
                 .map(Field::new_from_yaml)
@@ -79,8 +79,11 @@ impl Entity {
                 })
             }
         };
+        // This sorting is needed to make sure that complex generators get executed after
+        // simple ones are done due to the dependencies between them.
+        s_fields.sort();
 
-        Ok(Entity::new(s_name, s_pk_name, s_pk_type, s_entries))
+        Ok(Entity::new(s_name, s_pk_name, s_pk_type, s_fields))
     }
 
     pub fn get_table_name(&self) -> String {

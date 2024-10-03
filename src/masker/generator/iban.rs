@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use iban::Iban;
 use rand::seq::SliceRandom;
 
@@ -57,7 +55,7 @@ impl IbanGenerator {
 }
 
 impl Generator for IbanGenerator {
-    fn generate(&self, _: &super::Options) -> Result<super::GeneratedValue, super::GeneratorError> {
+    fn generate(&self, _: &Options) -> Result<super::GeneratedValue, super::GeneratorError> {
         let code = self.country_codes.choose(&mut rand::thread_rng()).ok_or(
             GeneratorError::new::<Self>(GeneratorErrorKind::GenerateIban),
         )?;
@@ -102,6 +100,7 @@ fn fails_to_create_generator_when_unexpected_country_code_is_met() {
 
 #[test]
 fn generates_random_iban() {
+    use std::collections::HashMap;
     let valid_yaml = "country_codes:
     - DE";
     let yaml: serde_yaml::Value = serde_yaml::from_str(valid_yaml).unwrap();
@@ -117,6 +116,7 @@ fn generates_random_iban() {
 
 #[test]
 fn generates_random_iban_formatted() {
+    use std::collections::HashMap;
     let valid_yaml = "country_codes:
     - DE
 formatted: true";

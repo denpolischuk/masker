@@ -8,6 +8,7 @@ use std::sync::Arc;
 use crate::database::adapter::DatabaseAdapter;
 use crate::database::error::{DatabaseAdapterError, DatabaseAdapterErrorKind};
 use crate::masker::error::ConfigParseError;
+use crate::masker::generator::GeneratedValue;
 use crate::masker::{self, PkType};
 
 pub struct MySQLAdapter {
@@ -60,29 +61,31 @@ impl MySQLAdapter {
                 ),
             });
         }
+        let pk_name = masker_entity.get_pk_name();
         let id = id.to_string();
-        let opts = HashMap::from([(masker_entity.get_pk_name(), &id)]);
-        let mut values: Vec<String> = vec![];
+        let id_kv = match masker_entity.get_pk_type() {
+            PkType::Int => (pk_name, GeneratedValue::Number(id.clone())),
+            PkType::String => (pk_name, GeneratedValue::String(id.clone())),
+        };
+        let mut opts = HashMap::from([id_kv]);
         for entry in entity_fields {
             let val = entry.generate(&opts).map_err(|e| {
                 DatabaseAdapterError::failed_to_mask(String::from(entry.get_column_name()), e)
             })?;
-            let str_v = match val {
-                masker::generator::GeneratedValue::String(v) => format!("'{}'", v),
-                masker::generator::GeneratedValue::Number(v) => v,
-            };
-            values.push(format!("{} = {}", entry.get_column_name(), str_v));
+            opts.insert(entry.get_column_name(), val);
         }
-        let cond = match masker_entity.get_pk_type() {
-            PkType::Int => format!("{} = {}", masker_entity.get_pk_name(), id),
-            PkType::String => {
-                format!("{} = '{}'", masker_entity.get_pk_name(), id)
-            }
-        };
+
+        let id_kv = opts.remove_entry(pk_name).unwrap(); // It's important to remove id from the
+                                                         // opts map before parsing it into query
+        let cond = format!("{} = {}", id_kv.0, id_kv.1);
+
         Ok(format!(
             "UPDATE {} SET {} WHERE {}",
             masker_entity.get_table_name(),
-            values.join(", "),
+            opts.iter()
+                .map(|(k, val)| format!("{} = {}", k, val))
+                .collect::<Vec<String>>()
+                .join(", "),
             cond
         ))
     }
@@ -191,9 +194,20 @@ impl DatabaseAdapter for MySQLAdapter {
 
 #[cfg(test)]
 mod tests {
-    use crate::masker::{generator::FirstNameGenerator, Entity, Field};
+    use fake::{faker::name::raw::*, locales::EN, Fake};
+    use masker::{
+        generator::{Options, SimpleGenerator},
+        FieldKind,
+    };
 
     use super::*;
+    use crate::masker::{Entity, Field};
+
+    fn get_generator() -> Box<SimpleGenerator> {
+        Box::new(SimpleGenerator::new(|_: &Options| {
+            Ok(GeneratedValue::String(FirstName(EN).fake::<String>()))
+        }))
+    }
 
     async fn get_test_conn() -> sqlx::Pool<sqlx::MySql> {
         sqlx::mysql::MySqlPoolOptions::new()
@@ -221,8 +235,12 @@ mod tests {
         let t_name = "table";
         let pk_name = "id";
         let fields: Vec<Field> = vec![
-            Field::new("name".to_string(), Box::new(FirstNameGenerator {})),
-            Field::new("last_name".to_string(), Box::new(FirstNameGenerator {})),
+            Field::new("name".to_string(), FieldKind::FirstName, get_generator()),
+            Field::new(
+                "last_name".to_string(),
+                FieldKind::LastName,
+                get_generator(),
+            ),
         ];
         let entity = Entity::new(t_name.to_string(), pk_name.to_string(), PkType::Int, fields);
         let id = 123;
@@ -240,8 +258,12 @@ mod tests {
         let t_name = "table";
         let pk_name = "id";
         let fields: Vec<Field> = vec![
-            Field::new("name".to_string(), Box::new(FirstNameGenerator {})),
-            Field::new("last_name".to_string(), Box::new(FirstNameGenerator {})),
+            Field::new("name".to_string(), FieldKind::FirstName, get_generator()),
+            Field::new(
+                "last_name".to_string(),
+                FieldKind::LastName,
+                get_generator(),
+            ),
         ];
         let entity = Entity::new(
             t_name.to_string(),
@@ -282,7 +304,8 @@ mod tests {
         let field_name = "contactFirstName";
         let fields: Vec<Field> = vec![Field::new(
             field_name.to_string(),
-            Box::new(FirstNameGenerator {}),
+            FieldKind::FirstName,
+            get_generator(),
         )];
         let entity = Entity::new(t_name.to_string(), pk_name.to_string(), PkType::Int, fields);
         let pool = get_test_conn().await;

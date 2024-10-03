@@ -1,3 +1,6 @@
+use std::str::FromStr;
+
+use fake::{locales::EN, Fake};
 use rand::{distributions::Uniform, thread_rng, Rng};
 
 use super::{
@@ -7,6 +10,7 @@ use super::{
 use crate::masker::{
     error::{ConfigParseError, ConfigParseErrorKind},
     generator::{error::GeneratorErrorKind, GeneratedValue, Generator, GeneratorError, Options},
+    FieldKind,
 };
 
 pub struct TemplatedGenerator {
@@ -51,6 +55,8 @@ impl TemplatedGenerator {
 impl Generator for TemplatedGenerator {
     fn generate(&self, opts: &Options) -> Result<GeneratedValue, GeneratorError> {
         let mut res = String::new();
+        use fake::faker::address::raw::*;
+        use fake::faker::name::raw::*;
         self.tokens.iter().try_for_each(|token| match &token.0 {
             // Simply add plain text to the result generated value
             TokenKind::Plain(s) => {
@@ -60,17 +66,32 @@ impl Generator for TemplatedGenerator {
             // Try replacing variable from options map
             TokenKind::Variable(v) => match opts.get(v) {
                 Some(val) => {
-                    res.push_str(val);
+                    res.push_str(match val {
+                        GeneratedValue::String(s) => s,
+                        GeneratedValue::Number(n) => n,
+                    });
                     Ok(())
                 }
-                None => Err(GeneratorError::new::<Self>(
-                    GeneratorErrorKind::ParseTemplatedGenerator(TemplatedParserError::new(
-                        super::error::TemplateParserErrorKind::FailedToResolveValueFromTemplate(
-                            self.template.clone(),
-                            v.clone(),
-                        ),
-                    )),
-                )),
+                None => {
+                    match FieldKind::from_str(v).unwrap() {
+                        FieldKind::CityName => res.push_str(CityName(EN).fake::<String>().as_str()),
+                        FieldKind::CountryCode => res.push_str(CountryCode(EN).fake::<String>().as_str()),
+                        FieldKind::CountryName => res.push_str(CountryName(EN).fake::<String>().as_str()),
+                        FieldKind::FirstName => res.push_str(FirstName(EN).fake()),
+                        FieldKind::LastName => res.push_str(FirstName(EN).fake()),
+                        FieldKind::PostCode => res.push_str(PostCode(EN).fake::<String>().as_str()),
+                        FieldKind::StateName => res.push_str(StateName(EN).fake::<String>().as_str()),
+                        FieldKind::Unknown(_) | FieldKind::Iban | FieldKind::Template => return Err(GeneratorError::new::<Self>(
+                            GeneratorErrorKind::ParseTemplatedGenerator(TemplatedParserError::new(
+                                super::error::TemplateParserErrorKind::FailedToResolveValueFromTemplate(
+                                    self.template.clone(),
+                                    v.clone(),
+                                ),
+                            )),
+                        )),
+                    };
+                    Ok(())
+                },
             },
             // Generate random sequence of capital letter of length of the token and add it to
             // the result val

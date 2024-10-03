@@ -1,11 +1,14 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display, str::FromStr};
+
+use fake::{locales::EN, Fake};
 
 use crate::masker::{
     error::{ConfigParseError, ConfigParseErrorKind},
-    generator::{FirstNameGenerator, LastNameGenerator, TemplatedGenerator},
+    generator::TemplatedGenerator,
+    FieldKind,
 };
 
-use super::{GeneratorError, IbanGenerator};
+use super::{GeneratorError, IbanGenerator, SimpleGenerator};
 
 #[non_exhaustive]
 pub enum GeneratedValue {
@@ -13,22 +16,81 @@ pub enum GeneratedValue {
     Number(String),
 }
 
+impl Display for GeneratedValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self {
+            GeneratedValue::Number(n) => write!(f, "{n}"),
+            GeneratedValue::String(s) => write!(f, "\"{s}\""),
+        }
+    }
+}
+
 pub trait Generator: Sync + Send {
     fn generate(&self, options: &Options) -> Result<GeneratedValue, GeneratorError>;
 }
 
-pub type Options<'a> = HashMap<&'a String, &'a String>;
+pub type Options<'a> = HashMap<&'a String, GeneratedValue>;
 
-pub fn new_from_yaml(yaml: &serde_yaml::Value) -> Result<Box<dyn Generator>, ConfigParseError> {
+pub fn new_from_yaml(
+    yaml: &serde_yaml::Value,
+) -> Result<(FieldKind, Box<dyn Generator>), ConfigParseError> {
+    use fake::faker::address::raw::*;
+    use fake::faker::name::raw::*;
     match yaml["kind"].as_str() {
-        Some(s) => match s {
-            "FirstName" => Ok(Box::new(FirstNameGenerator::new())),
-            "LastName" => Ok(Box::new(LastNameGenerator::new())),
-            "Template" => Ok(Box::new(TemplatedGenerator::new_from_yaml(yaml)?)),
-            "Iban" => Ok(Box::new(IbanGenerator::new_from_yaml(yaml)?)),
-            field => Err(ConfigParseError {
+        Some(s) => match FieldKind::from_str(s).unwrap() {
+            FieldKind::FirstName => Ok((
+                FieldKind::FirstName,
+                Box::new(SimpleGenerator::new(|_: &Options| {
+                    Ok(GeneratedValue::String(FirstName(EN).fake()))
+                })),
+            )),
+            FieldKind::LastName => Ok((
+                FieldKind::LastName,
+                Box::new(SimpleGenerator::new(|_: &Options| {
+                    Ok(GeneratedValue::String(LastName(EN).fake()))
+                })),
+            )),
+            FieldKind::CityName => Ok((
+                FieldKind::CityName,
+                Box::new(SimpleGenerator::new(|_: &Options| {
+                    Ok(GeneratedValue::String(CityName(EN).fake()))
+                })),
+            )),
+            FieldKind::CountryCode => Ok((
+                FieldKind::CountryCode,
+                Box::new(SimpleGenerator::new(|_: &Options| {
+                    Ok(GeneratedValue::String(CountryCode(EN).fake()))
+                })),
+            )),
+            FieldKind::CountryName => Ok((
+                FieldKind::CountryName,
+                Box::new(SimpleGenerator::new(|_: &Options| {
+                    Ok(GeneratedValue::String(CountryName(EN).fake()))
+                })),
+            )),
+            FieldKind::PostCode => Ok((
+                FieldKind::PostCode,
+                Box::new(SimpleGenerator::new(|_: &Options| {
+                    Ok(GeneratedValue::String(PostCode(EN).fake()))
+                })),
+            )),
+            FieldKind::StateName => Ok((
+                FieldKind::StateName,
+                Box::new(SimpleGenerator::new(|_: &Options| {
+                    Ok(GeneratedValue::String(StateName(EN).fake()))
+                })),
+            )),
+            FieldKind::Template => Ok((
+                FieldKind::Template,
+                Box::new(TemplatedGenerator::new_from_yaml(yaml)?),
+            )),
+            FieldKind::Iban => Ok((
+                FieldKind::Iban,
+                Box::new(IbanGenerator::new_from_yaml(yaml)?),
+            )),
+            FieldKind::Unknown(field) => Err(ConfigParseError {
                 field: s.to_string(),
-                kind: ConfigParseErrorKind::UnknownField(String::from(field)),
+                kind: ConfigParseErrorKind::UnknownField(field),
             }),
         },
         None => Err(ConfigParseError {
