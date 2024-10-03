@@ -1,13 +1,6 @@
 use std::str::FromStr;
 
-use fake::{
-    faker::address::{
-        ar_sa::{CountryName, StateName},
-        en::CountryCode,
-    },
-    locales::EN,
-    Fake,
-};
+use fake::{locales::EN, Fake};
 use rand::{distributions::Uniform, thread_rng, Rng};
 
 use super::{

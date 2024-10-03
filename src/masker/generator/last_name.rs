@@ -106,5 +106,5 @@ const RANDOM_NAMES: &[&str] = &[
 const RANDOM_NAMES_SIZE: usize = RANDOM_NAMES.len();
 pub fn generate() -> &'static str {
     let rand_i = rand::thread_rng().gen_range(0..RANDOM_NAMES_SIZE - 1);
-    return RANDOM_NAMES[rand_i];
+    RANDOM_NAMES[rand_i]
 }
