@@ -5,7 +5,7 @@ use super::{error::DatabaseAdapterError, mysql::MySQLAdapter};
 
 #[async_trait]
 pub trait DatabaseAdapter {
-    async fn apply_mask(&self, masker: std::sync::Arc<Masker>) -> Result<(), DatabaseAdapterError>;
+    async fn apply_mask(&self, masker: &Masker) -> Result<(), DatabaseAdapterError>;
 }
 
 pub fn new_db_adapter_from_yaml(

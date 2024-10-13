@@ -3,13 +3,12 @@ use async_trait::async_trait;
 use futures::future::join_all;
 use sqlx::Row;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use crate::database::adapter::DatabaseAdapter;
 use crate::database::error::{DatabaseAdapterError, DatabaseAdapterErrorKind};
 use crate::masker::error::ConfigParseError;
 use crate::masker::generator::GeneratedValue;
-use crate::masker::{self, PkType};
+use crate::masker::{self, Masker, PkType};
 
 pub struct MySQLAdapter {
     connection_creds: MySQLConnectionCredentials,
@@ -23,7 +22,7 @@ impl MySQLAdapter {
 
     async fn verify_entities(
         &self,
-        masker: Arc<masker::Masker>,
+        masker: &Masker,
         p: &sqlx::MySqlPool,
     ) -> Result<(), DatabaseAdapterError> {
         let rows = sqlx::query("SHOW TABLES;")
@@ -173,16 +172,13 @@ impl MySQLAdapter {
 
 #[async_trait]
 impl DatabaseAdapter for MySQLAdapter {
-    async fn apply_mask(
-        &self,
-        masker: Arc<crate::masker::Masker>,
-    ) -> Result<(), DatabaseAdapterError> {
+    async fn apply_mask(&self, masker: &Masker) -> Result<(), DatabaseAdapterError> {
         let pool = sqlx::mysql::MySqlPoolOptions::new()
             .max_connections(5)
             .connect(self.connection_creds.get_as_string().as_str())
             .await
             .map_err(DatabaseAdapterError::connection_error)?;
-        self.verify_entities(masker.clone(), &pool).await?;
+        self.verify_entities(masker, &pool).await?;
         let futs = masker
             .get_entities()
             .iter()

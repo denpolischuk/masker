@@ -13,13 +13,13 @@ async fn main() {
             exit(1);
         }
     };
-    let masker = std::sync::Arc::new(match masker::Masker::new_from_yaml(&yaml) {
+    let masker = match masker::Masker::new_from_yaml(&yaml) {
         Ok(m) => m,
         Err(e) => {
             println!("couldn't create masker entity: {e}");
             exit(1);
         }
-    });
+    };
     let db = match database::new_db_adapter_from_yaml(&yaml) {
         Ok(db) => db,
         Err(e) => {
@@ -28,7 +28,7 @@ async fn main() {
         }
     };
 
-    match db.apply_mask(masker.clone()).await {
+    match db.apply_mask(&masker).await {
         Ok(_) => (),
         Err(e) => {
             println!("couldn't mask the schema correctly: {e}");
