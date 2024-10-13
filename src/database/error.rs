@@ -23,7 +23,7 @@ impl Display for DatabaseAdapterError {
         match &self.kind {
             DatabaseAdapterErrorKind::FailedToMask(entry, _) => write!(f, "couldn't mask {entry}"),
             DatabaseAdapterErrorKind::NoEntriesSpecifiedForEntity(entity_name) => write!(f, "entity {} doesn't have any fields to mask. Either remove the entity from config or add fields that should be masked", entity_name),
-            DatabaseAdapterErrorKind::QueryFailed(_) => write!(f, "query has failed"),
+            DatabaseAdapterErrorKind::QueryFailed(e) => write!(f, "query has failed: {e}"),
             DatabaseAdapterErrorKind::DatabaseConnectionError(_) => write!(f, "connection failed"),
             DatabaseAdapterErrorKind::InconsistentSchema(missing_t) => write!(f, "some entities that were defined in yaml config were not found in the actual DB: {}", missing_t),
         }
