@@ -147,10 +147,9 @@ impl MySQLAdapter {
         let futs = (0..iterations.ceil() as i32).map(move |offs_idx| async move {
             let ids = self
                 .get_batch_to_update(masker_entity, p, b_size, offs_idx * b_size)
-                .await
-                .unwrap();
+                .await?;
             if ids.is_empty() {
-                return;
+                return Ok(());
             }
             let mut tx = p.begin().await.unwrap();
             for id in ids {
@@ -160,12 +159,18 @@ impl MySQLAdapter {
                         .as_str(),
                 )
                 .execute(&mut *tx)
-                .await
-                .unwrap();
+                .await?;
             }
-            tx.commit().await.unwrap()
+            tx.commit().await
         });
-        futures::future::join_all(futs).await;
+        futures::future::join_all(futs)
+            .await
+            .into_iter()
+            .collect::<Result<Vec<()>, sqlx::Error>>()
+            .map_err(|e| DatabaseAdapterError {
+                kind: DatabaseAdapterErrorKind::QueryFailed(e),
+            })?;
+
         Ok(())
     }
 }
