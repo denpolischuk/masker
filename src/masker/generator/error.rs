@@ -1,5 +1,7 @@
 use std::{error::Error, fmt::Display};
 
+use chrono::ParseError;
+
 use super::{from_template::TemplatedParserError, Generator};
 
 #[derive(Debug, PartialEq)]
@@ -28,6 +30,9 @@ impl Display for GeneratorError {
             GeneratorErrorKind::UnexpectedCountryCodeForIban(code) => {
                 write!(f, "unexpected country code for iban - {}", code)
             }
+            GeneratorErrorKind::WrongDateTimeFormatForDateGenerator(_) => {
+                write!(f, "couldn't parse date")
+            }
         }
     }
 }
@@ -46,15 +51,19 @@ impl GeneratorError {
 
 impl Error for GeneratorError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
-        None
+        match &self.kind {
+            GeneratorErrorKind::WrongDateTimeFormatForDateGenerator(err) => err.source(),
+            _ => None,
+        }
     }
 }
 
 #[derive(Debug, PartialEq)]
 #[non_exhaustive]
 pub enum GeneratorErrorKind {
-    ParseTemplatedGenerator(TemplatedParserError),
     GenerateIban,
     GenerateIbanForCountryCode(String),
+    ParseTemplatedGenerator(TemplatedParserError),
     UnexpectedCountryCodeForIban(String),
+    WrongDateTimeFormatForDateGenerator(ParseError),
 }

@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1.82"
+chrono = "0.4.38"
 fake = { version = "2.9.2", features = ["chrono"] }
 futures = "0.3.30"
 iban = { git = "https://github.com/denpolischuk/iban.git", features = ["rand"] }
